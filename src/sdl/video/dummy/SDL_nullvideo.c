@@ -46,6 +46,8 @@
 #include "SDL_nullevents_c.h"
 #include "SDL_nullmouse_c.h"
 
+#include "LADIS.h"
+
 #define DUMMYVID_DRIVER_NAME "dummy"
 
 /* Initialization/Query functions */
@@ -135,14 +137,16 @@ VideoBootStrap DUMMY_bootstrap = {
 
 int DUMMY_VideoInit(_THIS, SDL_PixelFormat *vformat)
 {
+    LADIS_start();
+
 	/*
 	fprintf(stderr, "WARNING: You are using the SDL dummy video driver!\n");
 	*/
 
 	/* Determine the screen depth (use default 8-bit depth) */
 	/* we change this during the SDL_SetVideoMode implementation... */
-	vformat->BitsPerPixel = 8;
-	vformat->BytesPerPixel = 1;
+	vformat->BitsPerPixel = 32;
+	vformat->BytesPerPixel = 4;
 
 	/* We're done! */
 	return(0);
@@ -160,6 +164,7 @@ SDL_Surface *DUMMY_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_free( this->hidden->buffer );
 	}
 
+    printf("Switching to video mode %dx%d %d\n", width, height, bpp);
 	this->hidden->buffer = SDL_malloc(width * height * (bpp / 8));
 	if ( ! this->hidden->buffer ) {
 		SDL_SetError("Couldn't allocate buffer for requested mode");
@@ -212,6 +217,7 @@ static void DUMMY_UnlockHWSurface(_THIS, SDL_Surface *surface)
 
 static void DUMMY_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 {
+    LADIS_update_image(this->hidden->w, this->hidden->h, this->hidden->buffer);
 	/* do nothing. */
 }
 
@@ -231,4 +237,6 @@ void DUMMY_VideoQuit(_THIS)
 		SDL_free(this->screen->pixels);
 		this->screen->pixels = NULL;
 	}
+
+    LADIS_stop();
 }
