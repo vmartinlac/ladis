@@ -155,7 +155,7 @@ void LeCompteEstBonAgent::play(LADIS::Interface* interface)
 
         std::vector< std::vector<Solver::Operation> > solutions;
         Solver solver;
-        solver.solve(stock, target, std::chrono::milliseconds(20000), 1, solutions);
+        solver.solve(stock, target, std::chrono::milliseconds(30000), 1, solutions);
 
         if(solutions.empty())
         {
@@ -202,7 +202,7 @@ void LeCompteEstBonAgent::play(LADIS::Interface* interface)
         }
         else
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(13000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(14000));
         }
 
         typeText(interface, "\n");
