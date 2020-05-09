@@ -39,6 +39,11 @@ namespace LADIS
             internals->image_mutex.lock();
             image = internals->image.clone();
             internals->image_mutex.unlock();
+
+            for(cv::Vec4b& pix : image)
+            {
+                pix[3] = 255;
+            }
         }
 
         void mouseMove(int dx, int dy) override
