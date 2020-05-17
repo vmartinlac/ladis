@@ -87,5 +87,29 @@ void DamesAgent::play(LADIS::Interface* interface)
     cv::Mat4b im;
     interface->getCurrentImage(im);
     cv::imwrite("tmp.png", im);
+
+    const cv::Rect checkerboard(0, 0, 441, 411);
+    const int border = 1;
+    const int SIDE = 10;
+    const int N = 50;
+    const int internal_margin = 4;
+
+    for(int i=0; i<N; i++)
+    {
+        const int y = SIDE-1-(2*i+1)/SIDE;
+        const int x = SIDE-1-2*(i%(SIDE/2)) - (y%2);
+
+        std::cout << i << " => " << x << ' ' << y << std::endl;
+
+        const cv::Rect ROI(
+            checkerboard.x + border + x*(checkerboard.width-border)/SIDE,
+            checkerboard.y + border + y*(checkerboard.height-border)/SIDE,
+            (checkerboard.width-border)/SIDE-border,
+            (checkerboard.height-border)/SIDE-border);
+
+        std::stringstream fname;
+        fname << "ROI_" << i << ".png";
+        cv::imwrite(fname.str(), im(ROI));
+    }
 }
 

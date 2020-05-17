@@ -7,13 +7,15 @@ void playWithUser();
 
 int main(int num_args, char** args)
 {
-    playWithUser();
-
-    /*
-    DamesAgent agent;
-
-    LADIS::run(&agent, true);
-    */
+    if(false)
+    {
+        playWithUser();
+    }
+    else
+    {
+        DamesAgent agent;
+        LADIS::run(&agent, true);
+    }
 
     return 0;
 }
