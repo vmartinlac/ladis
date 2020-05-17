@@ -7,10 +7,6 @@
 #include "Solver.h"
 #include "Segmentation.h"
 
-//
-#include <fstream>
-//
-
 LeCompteEstBonAgent::LeCompteEstBonAgent()
 {
     // initialize table of character to key code.
