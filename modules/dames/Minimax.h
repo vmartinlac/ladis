@@ -23,6 +23,10 @@ protected:
             is_investigating_action = false;
             has_best_value = false;
             best_value = 0.0f;
+            has_min_pruning_value = false;
+            has_max_pruning_value = false;
+            min_pruning_value = 0.0f;
+            max_pruning_value = 0.0f;
         }
 
         State state;
@@ -32,7 +36,10 @@ protected:
         bool has_best_value;
         float best_value;
 
-        // TODO: alpha-beta pruning
+        bool has_min_pruning_value;
+        bool has_max_pruning_value;
+        float min_pruning_value;
+        float max_pruning_value;
     };
 
 public:
@@ -65,6 +72,8 @@ public:
                 }
                 else
                 {
+                    bool prune = false;
+
                     if(nodes.back().is_investigating_action)
                     {
                         const bool take_it =
@@ -84,7 +93,34 @@ public:
                                 ret = true;
                             }
 
-                            // TODO: update alpha and beta.
+                            if(nodes.back().state.isMyTurn())
+                            {
+                                prune = nodes.back().has_min_pruning_value && nodes.back().min_pruning_value < nodes.back().best_value;
+
+                                if( nodes.back().has_max_pruning_value )
+                                {
+                                    nodes.back().max_pruning_value = std::max(nodes.back().max_pruning_value, nodes.back().best_value);
+                                }
+                                else
+                                {
+                                    nodes.back().has_max_pruning_value = true;
+                                    nodes.back().max_pruning_value = nodes.back().best_value;
+                                }
+                            }
+                            else
+                            {
+                                prune = nodes.back().has_max_pruning_value && nodes.back().max_pruning_value > nodes.back().best_value;
+
+                                if( nodes.back().has_min_pruning_value )
+                                {
+                                    nodes.back().min_pruning_value = std::min(nodes.back().min_pruning_value, nodes.back().best_value);
+                                }
+                                else
+                                {
+                                    nodes.back().has_min_pruning_value = true;
+                                    nodes.back().min_pruning_value = nodes.back().best_value;
+                                }
+                            }
                         }
                     }
                     else
@@ -95,7 +131,12 @@ public:
                     Action next_action;
                     State next_state;
 
-                    if( nodes.back().action_iterator.next(nodes.back().state, next_action, next_state) )
+                    if(prune)
+                    {
+                        previous_value = nodes.back().best_value;
+                        nodes.pop_back();
+                    }
+                    else if( nodes.back().action_iterator.next(nodes.back().state, next_action, next_state) )
                     {
                         if(nodes.size() == 1)
                         {
@@ -107,6 +148,10 @@ public:
 
                         nodes.emplace_back();
                         nodes.back().state = next_state;
+                        nodes.back().has_min_pruning_value = nodes[nodes.size()-2].has_min_pruning_value;
+                        nodes.back().has_max_pruning_value = nodes[nodes.size()-2].has_max_pruning_value;
+                        nodes.back().min_pruning_value = nodes[nodes.size()-2].min_pruning_value;
+                        nodes.back().max_pruning_value = nodes[nodes.size()-2].max_pruning_value;
                     }
                     else if(nodes.back().has_best_value)
                     {

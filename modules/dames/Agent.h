@@ -15,6 +15,7 @@ public:
 protected:
 
     void typeText(LADIS::Interface* interface, const char* text);
+    void extractCell(const cv::Mat4b& screen, int no, cv::Mat4b& cell);
 
 protected:
 

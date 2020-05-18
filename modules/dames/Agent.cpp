@@ -4,6 +4,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include "Agent.h"
+#include "Checkers.h"
 
 DamesAgent::DamesAgent()
 {
@@ -27,7 +28,26 @@ DamesAgent::DamesAgent()
     myCharToKey['-'] = std::make_tuple(LADIS_KEY_KP_MINUS, false);
     myCharToKey['*'] = std::make_tuple(LADIS_KEY_KP_MULTIPLY, false);
     myCharToKey['/'] = std::make_tuple(LADIS_KEY_KP_DIVIDE, false);
+}
 
+void DamesAgent::extractCell(const cv::Mat4b& screen, int no, cv::Mat4b& cell)
+{
+    const cv::Rect checkerboard(0, 0, 441, 411);
+    const int border = 1;
+    const int SIDE = Checkers::SIDE;
+    const int N = Checkers::N;
+
+    const int i = no;
+    const int y = SIDE-1-(2*i+1)/SIDE;
+    const int x = SIDE-1-2*(i%(SIDE/2)) - (y%2);
+
+    const cv::Rect ROI(
+        checkerboard.x + border + x*(checkerboard.width-border)/SIDE,
+        checkerboard.y + border + y*(checkerboard.height-border)/SIDE,
+        (checkerboard.width-border)/SIDE-border,
+        (checkerboard.height-border)/SIDE-border);
+
+    cell = screen(ROI);
 }
 
 void DamesAgent::typeText(LADIS::Interface* interface, const char* text)
@@ -88,28 +108,19 @@ void DamesAgent::play(LADIS::Interface* interface)
     interface->getCurrentImage(im);
     cv::imwrite("tmp.png", im);
 
-    const cv::Rect checkerboard(0, 0, 441, 411);
-    const int border = 1;
-    const int SIDE = 10;
-    const int N = 50;
-    const int internal_margin = 4;
-
-    for(int i=0; i<N; i++)
+    for(int i=0; i<Checkers::N; i++)
     {
-        const int y = SIDE-1-(2*i+1)/SIDE;
-        const int x = SIDE-1-2*(i%(SIDE/2)) - (y%2);
-
-        std::cout << i << " => " << x << ' ' << y << std::endl;
-
-        const cv::Rect ROI(
-            checkerboard.x + border + x*(checkerboard.width-border)/SIDE,
-            checkerboard.y + border + y*(checkerboard.height-border)/SIDE,
-            (checkerboard.width-border)/SIDE-border,
-            (checkerboard.height-border)/SIDE-border);
+        const int margin = 4;
 
         std::stringstream fname;
         fname << "ROI_" << i << ".png";
-        cv::imwrite(fname.str(), im(ROI));
+
+        cv::Mat4b ROI;
+        extractCell(im, i, ROI);
+
+        //ROI = ROI(cv::Rect(margin, margin, ROI.cols-2*margin, ROI.rows-2*margin));
+
+        cv::imwrite(fname.str(), ROI);
     }
 }
 
