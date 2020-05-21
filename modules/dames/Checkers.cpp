@@ -1,6 +1,16 @@
 #include "Checkers.h"
 
-void Checkers::State::setGrid(const char* str)
+void Checkers::State::setMyTurn(bool my_turn)
+{
+    myIsMyTurn = my_turn;
+}
+
+void Checkers::State::setFlatGrid(const char* grid)
+{
+    std::copy(grid, grid+N, myGrid);
+}
+
+void Checkers::State::setSquareGrid(const char* str)
 {
     if( strlen(str) != (SIDE+1)*SIDE ) throw std::runtime_error("internal error");
 
@@ -38,12 +48,6 @@ void Checkers::State::setGrid(const char* str)
     }
 }
 
-void Checkers::State::init(const char* grid, bool my_turn)
-{
-    setGrid(grid);
-    myIsMyTurn = my_turn;
-}
-
 char Checkers::State::readCell(int i) const
 {
     return myGrid[i];
@@ -75,7 +79,7 @@ void Checkers::State::invert()
     std::reverse(myGrid, myGrid+N);
 }
 
-std::string Checkers::State::getGrid() const
+std::string Checkers::State::getSquareGrid() const
 {
     char buffer[(SIDE+1)*SIDE+1];
 
@@ -222,58 +226,43 @@ bool Checkers::ActionIterator::next(const State& state_from, Action& action, Sta
 
 void Checkers::ActionIterator::computeMoves(const State& s)
 {
+    // TODO
+    /*
     myMoves.clear();
 
-    for(int i=0; i<N; i++)
-    {
-        switch(s.readCell(i))
-        {
-        case 'p':
-            computeMovesFromMan(s, i);
-            break;
-        case 'P':
-            computeMovesFromQueen(s, i);
-            break;
-        }
-    }
-}
-
-void Checkers::ActionIterator::computeMovesFromMan(const State& s, int i)
-{
-    if(s.readCell(i) != 'p') std::logic_error("internal error");
+    int stack[N];
+    int stack_size = 0;
 
     bool forbidden[N];
-    std::fill(forbidden, forbidden+N, false);
 
-    // TODO
-}
-
-void Checkers::ActionIterator::computeMovesFromQueen(const State& s, int i)
-{
-    if(s.readCell(i) != 'P') std::logic_error("internal error");
-
-    // TODO
-}
-
-bool Checkers::staHasLeftTop[Checkers::N];
-int Checkers::staLeftTop[Checkers::N];
-bool Checkers::staHasRightTop[Checkers::N];
-int Checkers::staRightTop[Checkers::N];
-bool Checkers::staHasLeftBottom[Checkers::N];
-int Checkers::staLeftBottom[Checkers::N];
-bool Checkers::staHasRightBottom[Checkers::N];
-int Checkers::staRightBottom[Checkers::N];
-
-void Checkers::initialize()
-{
     for(int i=0; i<N; i++)
     {
-        // TODO
+        const char piece = s.readCell(i);
 
-        staHasLeftTop[i] = false;
-        staHasRightTop[i] = false;
-        staHasLeftBottom[i] = false;
-        staHasRightBottom[i] = false;
+        if(piece == 'p' || piece == 'P')
+        {
+            std::fill(forbidden, forbidden+N, false);
+
+            stack[0] = i;
+            stack_size = 1;
+
+            while(stack_size > 0)
+            {
+                stack_size--;
+            }
+        }
     }
+    */
+}
+
+bool Checkers::getReachable(int from, int index, int& to)
+{
+    /*
+    ( (2*from+1) + SIDE + 1 )/2;
+    ( (2*from+1) + SIDE - 1 )/2;
+    ( (2*from+1) - SIDE + 1 )/2;
+    ( (2*from+1) - SIDE - 1 )/2;
+    */
+    return false; // TODO
 }
 

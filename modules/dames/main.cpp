@@ -22,8 +22,6 @@ int main(int num_args, char** args)
 
 void playWithUser()
 {
-    Checkers::initialize();
-
     /*
     const char* initial_grid =
         " o o o o o\n"
@@ -51,7 +49,8 @@ void playWithUser()
         ". . . . . \n";
 
     Checkers::State current_state;
-    current_state.init(initial_grid, true);
+    current_state.setMyTurn(true);
+    current_state.setSquareGrid(initial_grid);
 
     Checkers::Solver solver;
 
@@ -59,7 +58,7 @@ void playWithUser()
     while(go_on)
     {
         std::cout << std::endl;
-        std::cout << current_state.getGrid() << std::endl;
+        std::cout << current_state.getSquareGrid() << std::endl;
 
         if(current_state.isMyTurn())
         {

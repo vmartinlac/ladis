@@ -14,8 +14,6 @@ public:
     static constexpr int SIDE = 10;
     static constexpr int N = (SIDE*SIDE)/2;
 
-    static void initialize();
-
     class State
     {
     protected:
@@ -30,17 +28,18 @@ public:
         char myGrid[N];
         bool myIsMyTurn;
 
-    protected:
-
-        void setGrid(const char* str);
-
     public:
 
-        void init(const char* grid, bool my_turn);
+        void setMyTurn(bool my_turn);
+        void setFlatGrid(const char* grid);
+        void setSquareGrid(const char* grid);
+
         char readCell(int i) const;
-        void invert();
-        std::string getGrid() const;
+        std::string getSquareGrid() const;
         bool isMyTurn() const;
+
+        void invert();
+
         float getValue() const;
     };
 
@@ -72,10 +71,6 @@ public:
 
         void computeMoves(const State& s);
 
-        void computeMovesFromMan(const State& s, int i);
-
-        void computeMovesFromQueen(const State& s, int i);
-
     protected:
 
         struct Move
@@ -99,16 +94,6 @@ public:
 
 protected:
 
-    static bool staHasLeftTop[N];
-    static int staLeftTop[N];
-
-    static bool staHasRightTop[N];
-    static int staRightTop[N];
-
-    static bool staHasLeftBottom[N];
-    static int staLeftBottom[N];
-
-    static bool staHasRightBottom[N];
-    static int staRightBottom[N];
+    bool getReachable(int from, int index, int& to);
 };
 
