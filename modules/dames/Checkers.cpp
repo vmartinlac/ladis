@@ -225,36 +225,89 @@ bool Checkers::ActionIterator::next(const State& state_from, Action& action, Sta
     return ret;
 }
 
-void Checkers::ActionIterator::computeMoves(const State& s)
+void Checkers::ActionIterator::computeMoves(const State& state)
 {
     myMoves.clear();
 
-    // TODO
+    // first enumerate all moves.
 
-    /*
-    int stack[N];
-    int stack_size = 0;
-
-    bool forbidden[N];
-
-    for(int i=0; i<N; i++)
     {
-        const char piece = s.readCell(i);
+        int stack_size = 0;
+        int stack[N];
+        int next_direction[N];
 
-        if(piece == 'p' || piece == 'P')
+        bool forbidden[N];
+
+        for(int cell0=0; cell0<N; cell0++)
         {
-            std::fill(forbidden, forbidden+N, false);
+            const char piece = state.readCell(cell0);
 
-            stack[0] = i;
-            stack_size = 1;
-
-            while(stack_size > 0)
+            if(piece == 'p' || piece == 'P')
             {
-                stack_size--;
+                std::fill(forbidden, forbidden+N, false);
+
+                stack_size = 1;
+                stack[0] = cell0;
+                next_direction[0] = 0;
+
+                while(stack_size > 0)
+                {
+                    const int cell1 = stack[stack_size-1];
+                    int try_direction = -1;
+
+                    if( 0 <= next_direction[stack_size-1] && next_direction[stack_size-1] < 4 )
+                    {
+                        forbidden[cell1] = true;
+                        try_direction = next_direction[stack_size-1];
+                        next_direction[stack_size-1]++;
+                    }
+                    else
+                    {
+                        stack_size--;
+                        forbidden[cell1] = false;
+                        try_direction = -1;
+                    }
+
+                    if(try_direction >= 0)
+                    {
+                        const int cell2 = getReachable(cell1, try_direction);
+
+                        if(cell2 >= 0)
+                        {
+                            if( state.readCell(cell2) == ' ' && (piece == 'P' || (try_direction & 2)) )
+                            {
+                            }
+
+                            // TODO
+                        }
+                    }
+                }
             }
         }
     }
-    */
+
+    // second remove moves which do not result in maximum number of opponent pieces removed.
+
+    {
+        int max_removed = 0;
+        for(const Move& move : myMoves)
+        {
+            max_removed = std::max(max_removed, move.num_eliminated_pieces);
+        }
+
+        std::vector<Move>::iterator it = myMoves.begin();
+        while(it != myMoves.end())
+        {
+            if(it->num_eliminated_pieces == max_removed)
+            {
+                it++;
+            }
+            else
+            {
+                it = myMoves.erase(it);
+            }
+        }
+    }
 }
 
 int Checkers::getReachable(int from, int index)
