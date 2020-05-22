@@ -1,4 +1,4 @@
 
 add_executable(LADIS_asterix main.cpp Agent.h Agent.cpp)
-target_link_libraries(LADIS_asterix PUBLIC LADIS_simulator)
+target_link_libraries(LADIS_asterix PUBLIC LADIS_simulator opencv_imgcodecs)
 

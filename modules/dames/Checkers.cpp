@@ -1,3 +1,4 @@
+#include <iostream>
 #include "Checkers.h"
 
 void Checkers::State::setMyTurn(bool my_turn)
@@ -226,10 +227,11 @@ bool Checkers::ActionIterator::next(const State& state_from, Action& action, Sta
 
 void Checkers::ActionIterator::computeMoves(const State& s)
 {
-    // TODO
-    /*
     myMoves.clear();
 
+    // TODO
+
+    /*
     int stack[N];
     int stack_size = 0;
 
@@ -255,14 +257,39 @@ void Checkers::ActionIterator::computeMoves(const State& s)
     */
 }
 
-bool Checkers::getReachable(int from, int index, int& to)
+int Checkers::getReachable(int from, int index)
 {
-    /*
-    ( (2*from+1) + SIDE + 1 )/2;
-    ( (2*from+1) + SIDE - 1 )/2;
-    ( (2*from+1) - SIDE + 1 )/2;
-    ( (2*from+1) - SIDE - 1 )/2;
-    */
-    return false; // TODO
+    int ret = -1;
+
+    static_assert(SIDE % 2 == 0);
+
+    const int padding = 1 - (2*from/SIDE)%2;
+    const int cell = 2*from + padding;
+    const int a = cell % SIDE;
+    const int b = cell / SIDE;
+
+    const bool vertical[2] =
+    {
+        (b-1 >= 0),
+        (b+1 < SIDE)
+    };
+
+    const bool horizontal[2] = 
+    {
+        (a-1 >= 0),
+        (a+1 < SIDE)
+    };
+
+    const int delta[2] = { -1, 1 };
+
+    const int i0 = (index >> 0) & 1;
+    const int i1 = (index >> 1) & 1;
+
+    if(horizontal[i0] && vertical[i1])
+    {
+        ret = (SIDE*(b+delta[i1]) + a + delta[i0]) / 2;
+    }
+
+    return ret;
 }
 

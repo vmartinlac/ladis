@@ -1,4 +1,5 @@
 #include <thread>
+#include <opencv2/imgcodecs.hpp>
 #include <map>
 #include "Agent.h"
 
@@ -40,10 +41,13 @@ void AsterixAgent::play(LADIS::Interface* interface)
     }
 
     {
+        int id = 0;
+        auto tsave = std::chrono::system_clock::now();
+
         auto t0 = std::chrono::system_clock::now();
 
         interface->keyDown(LADIS_KEY_RIGHT);
-        while( (std::chrono::system_clock::now() - t0) < std::chrono::milliseconds(20000) )
+        while( (std::chrono::system_clock::now() - t0) < std::chrono::milliseconds(60000) )
         {
             interface->keyDown(LADIS_KEY_b);
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -51,11 +55,25 @@ void AsterixAgent::play(LADIS::Interface* interface)
             interface->keyUp(LADIS_KEY_b);
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
+            /*
             interface->keyDown(LADIS_KEY_v);
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
             interface->keyUp(LADIS_KEY_v);
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            */
+
+            const bool do_save = ( (std::chrono::system_clock::now() - tsave) > std::chrono::milliseconds(2000) );
+            if(do_save)
+            {
+                tsave = std::chrono::system_clock::now();
+                std::stringstream fname;
+                fname << "screen_" << id << ".png";
+                cv::Mat4b screen;
+                interface->getCurrentImage(screen);
+                cv::imwrite(fname.str(), screen);
+                id++;
+            }
         }
         interface->keyUp(LADIS_KEY_RIGHT);
     }

@@ -94,6 +94,16 @@ public:
 
 protected:
 
-    bool getReachable(int from, int index, int& to);
+    enum Neighbor
+    {
+        NEIGHBOR_BOTTOM_RIGHT=0,
+        NEIGHBOR_BOTTOM_LEFT=1,
+        NEIGHBOR_TOP_RIGHT=2,
+        NEIGHBOR_TOP_LEFT=3,
+    };
+
+protected:
+
+    static int getReachable(int from, int index);
 };
 

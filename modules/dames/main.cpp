@@ -7,7 +7,7 @@ void playWithUser();
 
 int main(int num_args, char** args)
 {
-    if(false)
+    if(true)
     {
         playWithUser();
     }
