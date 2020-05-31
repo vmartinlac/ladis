@@ -80,39 +80,34 @@ void playWithUser()
 
             if(available_actions.empty())
             {
-                std::cout << "You have lost" << std::endl;
+                std::cout << "YOU HAVE LOST" << std::endl;
                 go_on = false;
             }
             else
             {
+                {
+                    std::cout << "Your available actions are:" << std::endl;
+
+                    int i = 0;
+                    for( const auto& aa : available_actions )
+                    {
+                        std::cout << "[ " << i << " ] " << std::get<0>(aa).getText() << std::endl;
+                        i++;
+                    }
+                }
+
                 bool keep_asking = true;
 
                 while(keep_asking)
                 {
-                    int from = -1;
-                    int to = -1;
+                    int choice;
+                    std::cout << "WHICH MOVE?" << std::endl;
+                    std::cin >> choice;
 
-                    std::cout << "Move from? " << std::flush;
-                    std::cin >> from;
-                    std::cout << "Move to? " << std::flush;
-                    std::cin >> to;
-
-                    for(int i=0; i<available_actions.size() && keep_asking; i++)
+                    if(0 <= choice && choice < available_actions.size())
                     {
-                        const bool found =
-                            std::get<0>(available_actions[i]).getFrom() == from &&
-                            std::get<0>(available_actions[i]).getTo() == to;
-
-                        if(found)
-                        {
-                            keep_asking = false;
-                            current_state = std::get<1>(available_actions[i]);
-                        }
-                    }
-
-                    if(keep_asking)
-                    {
-                        std::cout << "This move is illegal!" << std::endl;
+                        keep_asking = false;
+                        current_state = std::get<1>(available_actions[choice]);
                     }
                 }
             }
@@ -123,9 +118,16 @@ void playWithUser()
 
             Checkers::Action action;
             Checkers::State next_state;
-            solver.solve(current_state, action, next_state, 10);
+            go_on = solver.solve(current_state, action, next_state, 10);
 
-            current_state = next_state;
+            if(go_on)
+            {
+                current_state = next_state;
+            }
+            else
+            {
+                std::cout << "COMPUTER HAS LOST!" << std::endl;
+            }
         }
     }
 }

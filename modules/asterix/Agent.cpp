@@ -46,14 +46,19 @@ void AsterixAgent::play(LADIS::Interface* interface)
 
         auto t0 = std::chrono::system_clock::now();
 
+        bool first = true;
+        cv::Mat4b screen;
+        cv::Mat4b newscreen;
+        std::chrono::system_clock::time_point tscreen;
+
         interface->keyDown(LADIS_KEY_RIGHT);
         while( (std::chrono::system_clock::now() - t0) < std::chrono::milliseconds(60000) )
         {
             interface->keyDown(LADIS_KEY_b);
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             interface->keyUp(LADIS_KEY_b);
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             /*
             interface->keyDown(LADIS_KEY_v);
@@ -63,14 +68,33 @@ void AsterixAgent::play(LADIS::Interface* interface)
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             */
 
-            const bool do_save = ( (std::chrono::system_clock::now() - tsave) > std::chrono::milliseconds(2000) );
+            std::chrono::system_clock::time_point tnewscreen = std::chrono::system_clock::now();
+            //if( first || tnewscreen-tscreen > std::chrono::milliseconds(10) )
+            {
+                interface->getCurrentImage(newscreen);
+
+                if( first || screen.size() != newscreen.size() )
+                {
+                    first = false;
+                    tscreen = tnewscreen;
+                    screen = newscreen;
+                }
+                else
+                {
+                    const double dt = 1.0e-6 * std::chrono::duration_cast<std::chrono::microseconds>(tnewscreen - tscreen).count();
+                    //const double alpha = std::exp(-lambda*dt);
+                    const double alpha = std::pow(0.5, dt/0.1);
+                    screen = alpha * screen + (1.0-alpha)*newscreen;
+                    tscreen = tnewscreen;
+                }
+            }
+
+            const bool do_save = ( (std::chrono::system_clock::now() - tsave) > std::chrono::milliseconds(750) );
             if(do_save)
             {
                 tsave = std::chrono::system_clock::now();
                 std::stringstream fname;
                 fname << "screen_" << id << ".png";
-                cv::Mat4b screen;
-                interface->getCurrentImage(screen);
                 cv::imwrite(fname.str(), screen);
                 id++;
             }

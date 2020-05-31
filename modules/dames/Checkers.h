@@ -30,16 +30,15 @@ public:
 
     public:
 
+        bool areTherePlayerPieces() const;
+        bool areThereOpponentPieces() const;
         void setMyTurn(bool my_turn);
         void setFlatGrid(const char* grid);
         void setSquareGrid(const char* grid);
-
         char readCell(int i) const;
         std::string getSquareGrid() const;
         bool isMyTurn() const;
-
         void invert();
-
         float getValue() const;
     };
 
@@ -47,16 +46,16 @@ public:
     {
     protected:
 
-        int myFrom;
-        int myTo;
+        int myNumMoves;
+        int myTrajectory[N];
 
     public:
 
-        void setFrom(int from);
-        void setTo(int to);
-        int getFrom() const;
-        int getTo() const;
+        void set(int num_moves, int (&trajectory)[N]);
+        int getNumMoves() const;
+        int getTrajectory(int i) const;
         void invert();
+        std::string getText() const;
     };
 
     class ActionIterator
@@ -64,7 +63,6 @@ public:
     public:
 
         void init(const State& s);
-
         bool next(const State& state_from, Action& action, State& state_to);
 
     protected:
@@ -73,21 +71,15 @@ public:
 
     protected:
 
-        struct Move
+        struct AvailableAction
         {
-            Move()
-            {
-                num_eliminated_pieces = 0;
-            }
-
-            int num_eliminated_pieces;
             Action action;
             State state;
         };
 
     protected:
 
-        std::vector<Move> myMoves;
+        std::vector<AvailableAction> myAvailableActions;
     };
 
     using Solver = Minimax<State, Action, ActionIterator>;
