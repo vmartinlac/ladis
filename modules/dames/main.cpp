@@ -4,20 +4,65 @@
 #include "Checkers.h"
 
 void playWithUser();
+void test();
 
 int main(int num_args, char** args)
 {
-    if(true)
+    int i = 0;
+
+    switch(0)
     {
+    case 0:
+        test();
+        break;
+    case 1:
         playWithUser();
-    }
-    else
-    {
-        DamesAgent agent;
-        LADIS::run(&agent, true);
+        break;
+    case 2:
+        {
+            DamesAgent agent;
+            LADIS::run(&agent, true);
+        }
+        break;
     }
 
     return 0;
+}
+
+void test()
+{
+    const char* initial_grid =
+        " . . . . .\n"
+        ". . . . . \n"
+        " . o . . .\n"
+        ". . . . . \n"
+        " . . . . .\n"
+        ". . . . . \n"
+        " p p p p p\n"
+        "p p p p p \n"
+        " p p p p p\n"
+        "p p p p p \n";
+
+    Checkers::State current_state;
+    current_state.setMyTurn(true);
+    current_state.setSquareGrid(initial_grid);
+    std::cout << current_state.getSquareGrid() << std::endl;
+
+    Checkers::ActionIterator it;
+    it.init(current_state);
+
+    Checkers::State s;
+    Checkers::Action a;
+    while(it.next(current_state, a, s))
+    {
+        for(int i=0; i<=a.getNumMoves(); i++)
+        {
+            std::cout << a.getTrajectory(i) << ' ';
+        }
+        std::cout << std::endl;
+        std::cout << s.getSquareGrid() << std::endl;
+        std::cout << std::endl;
+    }
 }
 
 void playWithUser()

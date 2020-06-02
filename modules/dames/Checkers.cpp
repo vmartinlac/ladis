@@ -259,34 +259,10 @@ void Checkers::ActionIterator::computeMoves(const State& state)
 {
     myAvailableActions.clear();
 
-    // Check whether there are ennemy pieces. If not, we have won and there is no action to take.
-
     const bool are_there_opponent_pieces = state.areThereOpponentPieces();
-
-    // Enumerate all available moves disregarding whether they achieve maximum number of ennemy pieces removed.
 
     if(are_there_opponent_pieces)
     {
-        struct Move
-        {
-            Move()
-            {
-                previous_move = -1;
-                starting_cell = -1;
-                landing_cell = -1;
-                move_direction = -1;
-                captured_cell = -1;
-                processed = false;
-            }
-
-            bool processed;
-            int previous_move;
-            int starting_cell;
-            int landing_cell;
-            int move_direction;
-            int captured_cell;
-        };
-
         std::vector<Move> stack;
         int highest_capture_count = 0;
 
@@ -312,70 +288,14 @@ void Checkers::ActionIterator::computeMoves(const State& state)
                         const int cell1 = stack.back().landing_cell;
                         const int this_index = stack.size()-1;
 
-                        bool added = false;
+                        const bool found_a_jump = enumerateJumpMoves(stack, this_index, state);
 
-                        // Enumerate available one-piece jumps.
-
-                        if(piece == 'P')
-                        {
-                            // TODO
-                            throw std::runtime_error("not implemented yet");
-                        }
-                        else if(piece == 'p')
-                        {
-                            for(int direction=0; direction<4; direction++)
-                            {
-                                const int cell2 = getReachable(cell1, direction);
-
-                                if(cell2 >= 0 && (state.readCell(cell2) == 'o' || state.readCell(cell2) == 'O'))
-                                {
-                                    bool already_captured = false;
-
-                                    {
-                                        int k = this_index;
-
-                                        while(!already_captured && k >= 0)
-                                        {
-                                            if(stack[k].captured_cell == cell2)
-                                            {
-                                                already_captured = true;
-                                            }
-
-                                            k = stack[k].previous_move;
-                                        }
-                                    }
-
-                                    if(!already_captured)
-                                    {
-                                        const int cell3 = getReachable(cell2, direction);
-
-                                        if(cell3 >= 0 && getReachable(cell3, direction) == '.')
-                                        {
-                                            stack.emplace_back();
-                                            stack.back().previous_move = this_index;
-                                            stack.back().captured_cell = cell2;
-                                            stack.back().move_direction = direction;
-                                            stack.back().landing_cell = cell3;
-                                            stack.back().starting_cell = cell1;
-                                            stack.back().processed = false;
-
-                                            added = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            throw std::runtime_error("internal error");
-                        }
-
-                        if(!added)
+                        if(!found_a_jump)
                         {
                             int num_captured = 0;
 
                             {
-                                int i = stack.size()-1;
+                                int i = this_index;
                                 while(stack[i].previous_move >= 0)
                                 {
                                     num_captured++;
@@ -388,39 +308,17 @@ void Checkers::ActionIterator::computeMoves(const State& state)
 
                                 if( num_captured == 0 )
                                 {
-                                    // TODO add to available moves even if (not to stack, directly to myAvailableActions).
+                                    enumerateNonJumpActions(cell1, state);
                                 }
                                 else
                                 {
                                     if(num_captured > highest_capture_count)
                                     {
-                                        highest_capture_count = num_captured;
                                         myAvailableActions.clear();
+                                        highest_capture_count = num_captured;
                                     }
 
-                                    myAvailableActions.emplace_back();
-                                    AvailableAction& aa = myAvailableActions.back();
-
-                                    {
-                                        int trajectory[N];
-                                        aa.action.set(num_captured, trajectory);
-                                    }
-
-                                    {
-                                        char grid[N];
-
-                                        for(int i=0; i<N; i++)
-                                        {
-                                            grid[i] = state.readCell(i);
-                                        }
-
-                                        {
-                                            // TODO: update grid.
-                                        }
-
-                                        aa.state.setMyTurn(false);
-                                        aa.state.setFlatGrid(grid);
-                                    }
+                                    addActionFromStack(stack, this_index, state);
                                 }
                             }
                         }
@@ -429,6 +327,199 @@ void Checkers::ActionIterator::computeMoves(const State& state)
             }
         }
     }
+}
+
+void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int index, const State& state)
+{
+    myAvailableActions.emplace_back();
+    AvailableAction& aa = myAvailableActions.back();
+
+    char grid[N];
+    int trajectory[N];
+
+    for(int i=0; i<N; i++)
+    {
+        grid[i] = state.readCell(i);
+    }
+
+    int count = 0;
+    char piece = 0;
+    int k = index;
+    int last_k = index;
+    while(k >= 0)
+    {
+        if(stack[k].captured_cell)
+        {
+            grid[stack[k].captured_cell] = '.';
+        }
+        trajectory[count] = stack[k].landing_cell;
+        piece = stack[k].landing_cell;
+
+        last_k = k;
+        count++;
+        k = stack[k].previous_move;
+    }
+
+    grid[stack[index].landing_cell] = grid[stack[last_k].landing_cell];
+    grid[stack[last_k].landing_cell] = '.';
+
+    aa.action.set(count-1, trajectory);
+    aa.state.setMyTurn(false);
+    aa.state.setFlatGrid(grid);
+
+    std::cout << "addactionfromstack" << std::endl;
+}
+
+bool Checkers::ActionIterator::enumerateNonJumpActions(int starting_cell, const State& state)
+{
+    const int piece = state.readCell(starting_cell);
+    bool ret = false;
+
+    const int directions[4] = { NEIGHBOR_TOP_RIGHT, NEIGHBOR_TOP_LEFT, NEIGHBOR_BOTTOM_RIGHT, NEIGHBOR_BOTTOM_LEFT };
+    const int num_directions = (piece == 'P') ? 4 : 2;
+
+    for(int idir=0; idir<num_directions; idir++)
+    {
+        const int direction = directions[idir];
+
+        bool go_on = true;
+        int landing_cell = starting_cell;
+
+        while(go_on)
+        {
+            landing_cell = getReachable(landing_cell, direction);
+
+            if(piece == 'p')
+            {
+                go_on = false;
+            }
+
+            if(landing_cell < 0)
+            {
+                go_on = false;
+            }
+            else if( state.readCell(landing_cell) == '.' )
+            {
+                myAvailableActions.emplace_back();
+                AvailableAction& aa = myAvailableActions.back();
+
+                int trajectory[N];
+                char grid[N];
+
+                for(int i=0; i<N; i++)
+                {
+                    grid[i] = state.readCell(i);
+                }
+
+                grid[starting_cell] = '.';
+                grid[landing_cell] = piece;
+
+                trajectory[0] = starting_cell;
+                trajectory[1] = landing_cell;
+
+                aa.action.set(1, trajectory);
+                aa.state.setMyTurn(false);
+                aa.state.setFlatGrid(grid);
+
+                ret = true;
+            }
+            else
+            {
+                go_on = false;
+            }
+        }
+    }
+
+    return ret;
+}
+
+bool Checkers::ActionIterator::enumerateJumpMoves(std::vector<Move>& stack, int index, const State& state)
+{
+    const int starting_cell = stack[index].landing_cell;
+    const int piece = state.readCell(starting_cell);
+    bool ret = false;
+
+    for(int direction=0; direction<4; direction++)
+    {
+        bool go_on = true;
+        int current_cell = starting_cell;
+
+        while(go_on)
+        {
+            const int adjacent_cell = getReachable(current_cell, direction);
+
+            if(adjacent_cell < 0)
+            {
+                go_on = false;
+            }
+            else if( state.readCell(adjacent_cell) == 'o' || state.readCell(adjacent_cell) == 'O')
+            {
+                bool already_captured = false;
+
+                go_on = false;
+
+                {
+                    int k = index;
+
+                    while(!already_captured && k >= 0)
+                    {
+                        if(stack[k].captured_cell == adjacent_cell)
+                        {
+                            already_captured = true;
+                        }
+
+                        k = stack[k].previous_move;
+                    }
+                }
+
+                if(!already_captured)
+                {
+                    bool go_on_bis = true;
+
+                    int landing_cell = adjacent_cell;
+
+                    while(go_on_bis)
+                    {
+                        landing_cell = getReachable(landing_cell, direction);
+
+                        if(piece == 'p')
+                        {
+                            go_on_bis = false;
+                        }
+
+                        if(landing_cell < 0 || state.readCell(landing_cell) != '.')
+                        {
+                            go_on_bis = false;
+                        }
+                        else
+                        {
+                            stack.emplace_back();
+                            stack.back().previous_move = index;
+                            stack.back().captured_cell = adjacent_cell;
+                            stack.back().move_direction = direction;
+                            stack.back().landing_cell = landing_cell;
+                            stack.back().starting_cell = starting_cell;
+                            stack.back().processed = false;
+
+                            ret = true;
+                        }
+                    }
+                }
+            }
+            else if( piece == 'P')
+            {
+                current_cell = adjacent_cell;
+            }
+            else
+            {
+                go_on = false;
+            }
+        }
+    }
+
+    std::cout << "enumeratejumpmoves()=" << ret << std::endl;
+
+    return ret;
 }
 
 int Checkers::getReachable(int from, int index)

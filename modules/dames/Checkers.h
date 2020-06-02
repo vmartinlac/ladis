@@ -67,15 +67,38 @@ public:
 
     protected:
 
-        void computeMoves(const State& s);
+        struct Move
+        {
+            Move()
+            {
+                previous_move = -1;
+                starting_cell = -1;
+                landing_cell = -1;
+                move_direction = -1;
+                captured_cell = -1;
+                processed = false;
+            }
 
-    protected:
+            bool processed;
+            int previous_move;
+            int starting_cell;
+            int landing_cell;
+            int move_direction;
+            int captured_cell;
+        };
 
         struct AvailableAction
         {
             Action action;
             State state;
         };
+
+    protected:
+
+        void computeMoves(const State& s);
+        bool enumerateJumpMoves(std::vector<Move>& stack, int index, const State& state);
+        bool enumerateNonJumpActions(int starting_cell, const State& state);
+        void addActionFromStack(std::vector<Move>& stack, int index, const State& state);
 
     protected:
 
