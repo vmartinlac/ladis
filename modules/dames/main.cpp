@@ -8,9 +8,7 @@ void test();
 
 int main(int num_args, char** args)
 {
-    int i = 0;
-
-    switch(0)
+    switch(1)
     {
     case 0:
         test();
@@ -79,22 +77,22 @@ void playWithUser()
         "p p p p p \n"
         " p p p p p\n"
         "p p p p p \n";
-    */
+        */
 
     const char* initial_grid =
         " . . . . .\n"
         ". . . . . \n"
         " . . . . .\n"
+        ". . o . . \n"
+        " . p . . .\n"
         ". . . . . \n"
-        " . o . . .\n"
-        ". p . . . \n"
         " . . . . .\n"
-        ". . . . . \n"
-        " . . p . .\n"
+        "P . . o . \n"
+        " . . . p .\n"
         ". . . . . \n";
 
     Checkers::State current_state;
-    current_state.setMyTurn(true);
+    current_state.setMyTurn(false);
     current_state.setSquareGrid(initial_grid);
 
     Checkers::Solver solver;
@@ -103,6 +101,7 @@ void playWithUser()
     while(go_on)
     {
         std::cout << std::endl;
+        std::cout << "####################################" << std::endl;
         std::cout << current_state.getSquareGrid() << std::endl;
 
         if(current_state.isMyTurn())
@@ -161,13 +160,24 @@ void playWithUser()
         {
             std::cout << "COMPUTER'S TURN" << std::endl;
 
+            current_state.invert();
+
             Checkers::Action action;
             Checkers::State next_state;
-            go_on = solver.solve(current_state, action, next_state, 10);
+            go_on = solver.solve(current_state, action, next_state, 11);
+
+            /*
+            Checkers::ActionIterator it;
+            it.init(current_state);
+            Checkers::Action aa;
+            Checkers::State ss;
+            while(it.next(current_state, aa, ss)) std::cout << "A" << std::endl;
+            */
 
             if(go_on)
             {
                 current_state = next_state;
+                current_state.invert();
             }
             else
             {
