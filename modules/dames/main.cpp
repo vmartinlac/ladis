@@ -4,42 +4,67 @@
 #include "Checkers.h"
 
 void playWithUser();
-void test();
+void test1();
+void test2();
 
 int main(int num_args, char** args)
 {
-    switch(1)
+    if(false)
     {
-    case 0:
-        test();
-        break;
-    case 1:
         playWithUser();
-        break;
-    case 2:
-        {
-            DamesAgent agent;
-            LADIS::run(&agent, true);
-        }
-        break;
+    }
+    else
+    {
+        DamesAgent agent;
+        LADIS::run(&agent, true);
     }
 
     return 0;
 }
 
-void test()
+void test2()
 {
     const char* initial_grid =
         " . . . . .\n"
         ". . . . . \n"
         " . o . . .\n"
-        ". . . . . \n"
+        ". p . . . \n"
+        " . . . . .\n"
+        ". . . . O \n"
+        " . . . . .\n"
+        ". o . . . \n"
+        " p . . . .\n"
+        ". . . . . \n";
+
+    Checkers::State current_state;
+    current_state.setMyTurn(true);
+    current_state.setSquareGrid(initial_grid);
+
+    Checkers::Solver solver;
+    Checkers::Action action;
+    Checkers::State next_state;
+    const bool ok = solver.solve(current_state, action, next_state, 10);
+    if(ok)
+    {
+        std::cout << current_state.getSquareGrid() << std::endl;
+        std::cout << std::endl;
+        std::cout << next_state.getSquareGrid() << std::endl;
+    }
+}
+
+void test1()
+{
+    const char* initial_grid =
         " . . . . .\n"
         ". . . . . \n"
-        " p p p p p\n"
-        "p p p p p \n"
-        " p p p p p\n"
-        "p p p p p \n";
+        " . o . . .\n"
+        ". p . . . \n"
+        " . . . . .\n"
+        ". . . . O \n"
+        " . . . . .\n"
+        ". . o . . \n"
+        " . p . . .\n"
+        ". . . . . \n";
 
     Checkers::State current_state;
     current_state.setMyTurn(true);
@@ -65,7 +90,6 @@ void test()
 
 void playWithUser()
 {
-    /*
     const char* initial_grid =
         " o o o o o\n"
         "o o o o o \n"
@@ -77,22 +101,9 @@ void playWithUser()
         "p p p p p \n"
         " p p p p p\n"
         "p p p p p \n";
-        */
-
-    const char* initial_grid =
-        " . . . . .\n"
-        ". . . . . \n"
-        " . . . . .\n"
-        ". . o . . \n"
-        " . p . . .\n"
-        ". . . . . \n"
-        " . . . . .\n"
-        "P . . o . \n"
-        " . . . p .\n"
-        ". . . . . \n";
 
     Checkers::State current_state;
-    current_state.setMyTurn(false);
+    current_state.setMyTurn(true);
     current_state.setSquareGrid(initial_grid);
 
     Checkers::Solver solver;

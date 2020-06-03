@@ -363,7 +363,13 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
     grid[stack[index].landing_cell] = grid[stack[last_k].landing_cell];
     grid[stack[last_k].landing_cell] = '.';
 
-    // TODO: promotion to queen.
+    for(int i=0; i<SIDE/2; i++)
+    {
+        if(grid[i] == 'o')
+        {
+            grid[i] = 'O';
+        }
+    }
 
     aa.action.set(count-1, trajectory);
     aa.state.setMyTurn(false);
@@ -414,14 +420,20 @@ bool Checkers::ActionIterator::enumerateNonJumpActions(int starting_cell, const 
                 grid[starting_cell] = '.';
                 grid[landing_cell] = piece;
 
+                for(int i=0; i<SIDE/2; i++)
+                {
+                    if(grid[i] == 'o')
+                    {
+                        grid[i] = 'O';
+                    }
+                }
+
                 trajectory[0] = starting_cell;
                 trajectory[1] = landing_cell;
 
                 aa.action.set(1, trajectory);
                 aa.state.setMyTurn(false);
                 aa.state.setFlatGrid(grid);
-
-                // TODO promotion to queen.
 
                 ret = true;
             }
