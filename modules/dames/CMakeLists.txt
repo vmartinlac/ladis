@@ -5,6 +5,16 @@ add_executable(
     Minimax.h
     Checkers.h
     Checkers.cpp
+    MinimaxPolicy.h
+    MinimaxPolicy.cpp
+    UniformPolicy.h
+    UniformPolicy.cpp
+    HumanPolicy.h
+    HumanPolicy.cpp
+    Tournament.h
+    Tournament.cpp
+    Policy.h
+    Policy.cpp
     Agent.h
     Agent.cpp)
 
