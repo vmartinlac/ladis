@@ -4,8 +4,8 @@
 #include <stdexcept>
 
 /*
-float State::getValue();
-bool State::isMyTurn();
+float State::getValue() const;
+bool State::isMyTurn() const;
 
 void ActionIterator::init(const State& s);
 bool ActionIterator::next(const State& state_from, Action& action, State& state_to);
