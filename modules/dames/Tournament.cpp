@@ -69,7 +69,7 @@ bool Tournament::run(Policy* p1, Policy* p2, int& winner)
 
             if(myYield)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
         else

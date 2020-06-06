@@ -151,23 +151,16 @@ void produce_stats()
     policies.emplace_back(new MinimaxPolicy(3));
     policies.back()->setName("MinimaxPolicy(max_depth=3)");
 
-    policies.emplace_back(new MinimaxPolicy(5));
-    policies.back()->setName("MinimaxPolicy(max_depth=5)");
-
     policies.emplace_back(new MinimaxPolicy(7));
     policies.back()->setName("MinimaxPolicy(max_depth=7)");
 
     std::vector< std::tuple<std::shared_ptr<Policy>, std::shared_ptr<Policy> > > pairs;
-    pairs.emplace_back( policies[0], policies[0] );
-    pairs.emplace_back( policies[1], policies[0] );
-    pairs.emplace_back( policies[2], policies[0] );
-    pairs.emplace_back( policies[3], policies[0] );
-    pairs.emplace_back( policies[0], policies[1] );
-    pairs.emplace_back( policies[0], policies[2] );
-    pairs.emplace_back( policies[0], policies[3] );
+    pairs.emplace_back( policies[1], policies[1] );
+    pairs.emplace_back( policies[1], policies[2] );
+    pairs.emplace_back( policies[2], policies[1] );
 
     std::default_random_engine engine;
-    engine.seed(101);
+    engine.seed(121);
 
     const int num_samples = pairs.size() * 100;
 
