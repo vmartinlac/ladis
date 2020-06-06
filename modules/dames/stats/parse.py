@@ -53,6 +53,7 @@ for k0 in total:
         win_rate = 100.0 * float(wins[k0][k1]) / float(total[k0][k1])
         loss_rate = 100.0 * float(losses[k0][k1]) / float(total[k0][k1])
         draw_rate = 100.0 * float(draws[k0][k1]) / float(total[k0][k1])
+        tot = total[k0][k1]
         print("Scores for {} against {}:".format(k0, k1))
-        print(win_rate, loss_rate, draw_rate)
+        print(win_rate, loss_rate, draw_rate, tot)
 
