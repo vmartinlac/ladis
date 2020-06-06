@@ -134,8 +134,13 @@ bool Checkers::State::isMyTurn() const
 
 float Checkers::State::getValue() const
 {
+    const float end_game = 2.0f*N + 1.0f;
+    const float queen_weight = 1.2f;
+    const float man_weight = 1.0f;
+
     int my_count = 0;
     int his_count = 0;
+    float delta = 0.0f;
 
     for(int i=0; i<N; i++)
     {
@@ -143,15 +148,19 @@ float Checkers::State::getValue() const
         {
         case 'p':
             my_count++;
+            delta += man_weight;
             break;
         case 'P':
-            my_count += 2;
+            delta += queen_weight;
+            my_count++;
             break;
         case 'o':
-            his_count--;
+            delta -= man_weight;
+            his_count++;
             break;
         case 'O':
-            his_count -= 2;
+            delta -= queen_weight;
+            his_count++;
             break;
         case '.':
             break;
@@ -160,7 +169,6 @@ float Checkers::State::getValue() const
         }
     }
 
-    const float end_game = 2*50+1;
     float ret = 0.0f;
 
     if( my_count > 0 && his_count == 0 )
@@ -173,7 +181,8 @@ float Checkers::State::getValue() const
     }
     else
     {
-        ret = static_cast<float>(my_count - his_count);
+        //ret = static_cast<float>(my_count - his_count);
+        ret = delta;
     }
 
     return ret;
