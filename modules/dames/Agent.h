@@ -20,9 +20,12 @@ protected:
     void computeFeatures(const cv::Mat4b& roi, cv::Vec6f& features);
     char predictCell(const cv::Vec6f& features);
     void readState(const cv::Mat4b& screen, Checkers::State& s);
+    bool extractIsMyTurn(const cv::Mat4b& screen);
+    void saveScreen(const cv::Mat4b& screen);
 
 protected:
 
     std::map<char, std::tuple<int,bool> > myCharToKey;
+    int myScreenshotCount;
 };
 

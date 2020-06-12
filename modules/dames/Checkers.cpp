@@ -25,7 +25,21 @@ void Checkers::State::setMyTurn(bool my_turn)
 
 void Checkers::State::setFlatGrid(const char* grid)
 {
-    std::copy(grid, grid+N, myGrid);
+    for(int i=0; i<N; i++)
+    {
+        switch(grid[i])
+        {
+        case '.':
+        case 'p':
+        case 'P':
+        case 'o':
+        case 'O':
+            myGrid[i] = grid[i];
+            break;
+        default:
+            throw std::runtime_error("internal error");
+        }
+    }
 }
 
 void Checkers::State::setSquareGrid(const char* str)
@@ -135,8 +149,6 @@ bool Checkers::State::isMyTurn() const
 float Checkers::State::getValue() const
 {
     const float end_game = 2.0f*N + 1.0f;
-    const float queen_weight = 1.2f;
-    const float man_weight = 1.0f;
 
     int my_count = 0;
     int his_count = 0;
@@ -148,19 +160,19 @@ float Checkers::State::getValue() const
         {
         case 'p':
             my_count++;
-            delta += man_weight;
+            delta += 1.0;
             break;
         case 'P':
-            delta += queen_weight;
             my_count++;
+            delta += 1.5;
             break;
         case 'o':
-            delta -= man_weight;
             his_count++;
+            delta -= 0.5;
             break;
         case 'O':
-            delta -= queen_weight;
             his_count++;
+            delta -= 0.8;
             break;
         case '.':
             break;
@@ -181,7 +193,6 @@ float Checkers::State::getValue() const
     }
     else
     {
-        //ret = static_cast<float>(my_count - his_count);
         ret = delta;
     }
 
@@ -357,7 +368,7 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
     int last_k = index;
     while(k >= 0)
     {
-        if(stack[k].captured_cell)
+        if(stack[k].captured_cell >= 0)
         {
             grid[stack[k].captured_cell] = '.';
         }
@@ -368,6 +379,8 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
         count++;
         k = stack[k].previous_move;
     }
+
+    std::reverse(trajectory, trajectory+count);
 
     grid[stack[index].landing_cell] = grid[stack[last_k].landing_cell];
     grid[stack[last_k].landing_cell] = '.';

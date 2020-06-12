@@ -124,19 +124,37 @@ void tmp2()
 {
     const char* initial_grid =
         " . . . . .\n"
+        ". . . o . \n"
+        " . . o o .\n"
+        "P . . . . \n"
+        " . . o o p\n"
         ". . . . . \n"
         " . . . . .\n"
-        ". . . . . \n"
-        " . . . . .\n"
-        ". . . . o \n"
-        " . o . . .\n"
-        ". p . o . \n"
-        " . . p . .\n"
-        ". . . . . \n";
+        "p . o . . \n"
+        " . . . p p\n"
+        ". . p . . \n";
 
     Checkers::State current_state;
     current_state.setMyTurn(true);
     current_state.setSquareGrid(initial_grid);
+    std::cout << current_state.getSquareGrid() << std::endl;
+
+    {
+        Checkers::ActionIterator action_iterator;
+        action_iterator.init(current_state);
+
+        Checkers::Action action_;
+        Checkers::State state_;
+        while(action_iterator.next(current_state, action_, state_))
+        {
+            std::cout << state_.getSquareGrid() << std::endl;
+            for(int i=0; i<=action_.getNumMoves(); i++)
+            {
+                std::cout << action_.getTrajectory(i) << ' ';
+            }
+            std::cout << std::endl;
+        }
+    }
 
     exit(0);
 }
@@ -219,8 +237,9 @@ void produce_stats()
 
 int main(int num_args, char** args)
 {
-    produce_stats();
-    exit(0);
+    //tmp2(); exit(0);
+    //produce_stats();
+    //exit(0);
     ////////////::
 
     DamesAgent agent;

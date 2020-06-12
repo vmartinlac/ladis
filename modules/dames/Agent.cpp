@@ -8,6 +8,8 @@
 
 DamesAgent::DamesAgent()
 {
+    myScreenshotCount = 0;
+
     // initialize table of character to key code.
 
     for(char i=0; i<25; i++)
@@ -94,22 +96,115 @@ void DamesAgent::typeText(LADIS::Interface* interface, const char* text)
 
 void DamesAgent::play(LADIS::Interface* interface)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    using ActionState = std::tuple<Checkers::Action, Checkers::State>;
+    using ActionStateList = std::vector<ActionState>;
 
+    const int minimax_max_depth = 8;
+
+    cv::Mat4b screen;
+    Checkers::Solver solver;
+    Checkers::ActionIterator action_iterator;
+    Checkers::State current_state;
+    ActionStateList action_state_list;
+    bool go_on = true;
+
+    // let dosbox initialize.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+    // launch DAME2020 game.
     typeText(interface, "CD DAME2020\nDA2020\n");
-    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
+    // skip intro.
     typeText(interface, "\n");
-    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-    typeText(interface, "5\n");
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+    // select difficulty and start party.
+    typeText(interface, "0\n");
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
-    cv::Mat4b im;
-    interface->getCurrentImage(im);
+    while(go_on)
+    {
+        interface->getCurrentImage(screen);
 
-    Checkers::State s;
-    readState(im, s);
-    std::cout << s.getSquareGrid() << std::endl;
+        readState(screen, current_state);
+
+        if( current_state.isMyTurn() )
+        {
+            // Print some info to the user.
+            std::cout << "My turn!" << std::endl;
+            std::cout << current_state.getSquareGrid() << std::endl;
+
+            // save current screen.
+            saveScreen(screen);
+
+            // Enumerate available actions.
+            {
+                action_iterator.init(current_state);
+                action_state_list.clear();
+
+                Checkers::Action action_;
+                Checkers::State state_;
+                while(action_iterator.next(current_state, action_, state_))
+                {
+                    action_state_list.emplace_back(action_, state_);
+                }
+                std::cout << "Number of available actions: " << action_state_list.size() << std::endl;
+            }
+
+            if(action_state_list.empty())
+            {
+                std::cout << "I have lost!" << std::endl;
+                go_on = false;
+            }
+            else
+            {
+                Checkers::Action action;
+                Checkers::State resulting_state;
+
+                std::cout << "Computing best action with minimax..." << std::endl;
+
+                auto t0 = std::chrono::steady_clock::now();
+                const bool ok = solver.solve(current_state, action, resulting_state, minimax_max_depth);
+                auto t1 = std::chrono::steady_clock::now();
+                std::cout << "Done" << std::endl;
+
+                const double elapsed = 1.0e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0).count();
+
+                std::cout << "Elapsed time (s): " << elapsed << std::endl;
+
+                if(ok)
+                {
+                    std::cout << "Move:";
+                    std::stringstream ss;
+                    for(int i=0; i<=action.getNumMoves(); i++)
+                    {
+                        const int cell = action.getTrajectory(i) + 1;
+                        ss << cell << '\n';
+                        std::cout << ' ' << cell;
+                    }
+                    std::cout << std::endl;
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    typeText(interface, ss.str().c_str());
+                    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+                }
+                else
+                {
+                    std::cout << "I have lost!" << std::endl;
+                    go_on = false;
+                }
+            }
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    }
+
+    // Save last screen.
+    interface->getCurrentImage(screen);
+    saveScreen(screen);
 }
 
 void DamesAgent::readState(const cv::Mat4b& screen, Checkers::State& s)
@@ -128,7 +223,37 @@ void DamesAgent::readState(const cv::Mat4b& screen, Checkers::State& s)
     }
 
     s.setFlatGrid(grid);
-    s.setMyTurn(true);
+    s.setMyTurn(extractIsMyTurn(screen));
+}
+
+bool DamesAgent::extractIsMyTurn(const cv::Mat4b& screen)
+{
+    const uint8_t ref[49] =
+    {
+        0, 255, 255, 255, 255, 0, 0,
+        255, 255, 0, 0, 255, 255, 0,
+        0, 0, 0, 0, 255, 255, 0,
+        0, 0, 0, 255, 255, 0, 0,
+        0, 0, 255, 255, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        0, 0, 255, 255, 0, 0, 0
+    };
+
+    const cv::Rect location(0, 461, 7, 7);
+    cv::Mat4b ROI = screen(location);
+
+    int dist = 0;
+    for(int i=0; i<7; i++)
+    {
+        for(int j=0; j<7; j++)
+        {
+            dist += std::abs(ROI(i,j)[0] - ref[i*7+j]);
+            dist += std::abs(ROI(i,j)[1] - ref[i*7+j]);
+            dist += std::abs(ROI(i,j)[2] - ref[i*7+j]);
+        }
+    }
+
+    return (dist == 0);
 }
 
 void DamesAgent::computeFeatures(const cv::Mat4b& picture, cv::Vec6f& features)
@@ -162,7 +287,7 @@ void DamesAgent::computeFeatures(const cv::Mat4b& picture, cv::Vec6f& features)
 
 char DamesAgent::predictCell(const cv::Vec6f& features)
 {
-    const char* values = " jJoO";
+    const char* values = ".pPoO";
 
     static const float reference_features[6*5] =
     {
@@ -190,6 +315,15 @@ char DamesAgent::predictCell(const cv::Vec6f& features)
     return values[k];
 }
 
+void DamesAgent::saveScreen(const cv::Mat4b& screen)
+{
+    std::stringstream fname;
+    fname << "screen_" << myScreenshotCount << ".png";
+    myScreenshotCount++;
+
+    cv::imwrite(fname.str(), screen);
+}
+
 /*
 empty [[ 4.44089210e-16 -1.11022302e-16  6.66133815e-16 -6.66133815e-16 -8.88178420e-16  4.44089210e-16]
 homme joueur [ 1.44226667e+00  1.34842778e+00  5.83527000e-01  6.65310000e-01 3.18606667e+00  3.48021222e+00]
@@ -197,3 +331,4 @@ dame joueur [ 1.36443750e+00  1.50949500e+00  6.64148000e-01  8.31589000e-01 4.9
 homme adversaire [ 1.30302600e+00  1.40953400e+00  3.90906800e+00  4.22860400e+00 3.90906800e+00  4.22860400e+00]
 dame adversaire [ 1.93052500e+00  2.21705500e+00  5.79157500e+00  6.65116000e+00 5.79157500e+00  6.65116000e+00]
 */
+
