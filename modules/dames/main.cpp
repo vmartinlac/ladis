@@ -238,52 +238,42 @@ void produce_stats()
 
 int main(int num_args, char** args)
 {
-    const int depth_min = 2;
-    const int depth_max = 9;
-
-    std::default_random_engine rng;
-    rng.seed(120);
-
-    std::ofstream logfile("log.csv");
-
-    while(true)
+    if(num_args != 3)
     {
-        /*
-        const int depth = depth_min + rng() % (depth_max - depth_min + 1);
-        const int opponent_skill = rng() % 6;
-        */
-        const int depth = 2;
-        const int opponent_skill = 0;
-
-        DamesAgent agent;
-        agent.setSaveScreens(true);
-        agent.setOpponentSkill(opponent_skill);
-        agent.setMinimaxDepth(depth);
-
-        LADIS::run(&agent, true);
-
-        std::string outcome_string;
-
-        switch(agent.getOutcome())
-        {
-        case DamesAgent::OUTCOME_WIN:
-            outcome_string = "WIN";
-            break;
-        case DamesAgent::OUTCOME_LOSE:
-            outcome_string = "LOSE";
-            break;
-        case DamesAgent::OUTCOME_DRAW:
-            outcome_string = "DRAW";
-            break;
-        case DamesAgent::OUTCOME_OTHER:
-            outcome_string = "OTHER";
-            break;
-        default:
-            throw std::runtime_error("internal error");
-        }
-
-        logfile << outcome_string << ' ' << opponent_skill << ' ' << depth << std::endl;
+        throw std::runtime_error("bad command line!");
     }
+
+    const int depth = atoi(args[1]);
+    const int opponent_skill = atoi(args[2]);
+
+    DamesAgent agent;
+    agent.setSaveScreens(true);
+    agent.setOpponentSkill(opponent_skill);
+    agent.setMinimaxDepth(depth);
+
+    LADIS::run(&agent, true);
+
+    std::string outcome_string;
+
+    switch(agent.getOutcome())
+    {
+    case DamesAgent::OUTCOME_WIN:
+        outcome_string = "WIN";
+        break;
+    case DamesAgent::OUTCOME_LOSE:
+        outcome_string = "LOSE";
+        break;
+    case DamesAgent::OUTCOME_DRAW:
+        outcome_string = "DRAW";
+        break;
+    case DamesAgent::OUTCOME_OTHER:
+        outcome_string = "OTHER";
+        break;
+    default:
+        throw std::runtime_error("internal error");
+    }
+
+    std::cout << "LADIS_RESULT " << outcome_string << ' ' << opponent_skill << ' ' << depth << std::endl;
 
     return 0;
 }
