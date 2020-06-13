@@ -3,6 +3,7 @@
 MinimaxPolicy::MinimaxPolicy(int max_depth)
 {
     myMaxDepth = max_depth;
+    myUtility.setDefaultWeights();
 }
 
 bool MinimaxPolicy::getAction(
@@ -21,7 +22,7 @@ bool MinimaxPolicy::getAction(
         state.invert();
     }
 
-    ret = mySolver.solve(state, action, state_to, myMaxDepth);
+    ret = mySolver.solve(state, action, state_to, myUtility, myMaxDepth);
 
     if(ret)
     {

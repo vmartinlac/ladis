@@ -109,12 +109,15 @@ void DamesAgent::play(LADIS::Interface* interface)
     using ActionStateList = std::vector<ActionState>;
 
     cv::Mat4b screen;
-    Checkers::Solver solver;
+    Checkers::SolverN solver;
+    Checkers::NeuralNetworkUtilityFunction utility;
     Checkers::ActionIterator action_iterator;
     Checkers::State current_state;
     ActionStateList action_state_list;
     int num_consecutive_outcomes = 0;
     bool go_on = true;
+
+    utility.setDefaultWeights();
 
     myOutcome = OUTCOME_OTHER;
 
@@ -198,7 +201,7 @@ void DamesAgent::play(LADIS::Interface* interface)
                     std::cout << "Computing best action with minimax..." << std::endl;
 
                     auto t0 = std::chrono::steady_clock::now();
-                    const bool ok = solver.solve(current_state, action, resulting_state, myMinimaxDepth);
+                    const bool ok = solver.solve(current_state, action, resulting_state, utility, myMinimaxDepth);
                     auto t1 = std::chrono::steady_clock::now();
                     std::cout << "Done" << std::endl;
 

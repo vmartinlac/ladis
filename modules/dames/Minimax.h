@@ -7,11 +7,13 @@
 float State::getValue() const;
 bool State::isMyTurn() const;
 
+float UtilityFunction::getValue(const State& s) const;
+
 void ActionIterator::init(const State& s);
 bool ActionIterator::next(const State& state_from, Action& action, State& state_to);
 */
 
-template<typename State, typename Action, typename ActionIterator>
+template<typename State, typename UtilityFunction, typename Action, typename ActionIterator>
 class Minimax
 {
 protected:
@@ -46,7 +48,7 @@ public:
 
     Minimax() = default;
 
-    bool solve(const State& initial_state, Action& action, State& resulting_state, int max_depth)
+    bool solve(const State& initial_state, Action& action, State& resulting_state, UtilityFunction& utility, int max_depth)
     {
         bool ret = false;
 
@@ -66,7 +68,7 @@ public:
             {
                 if(nodes.size() >= max_depth)
                 {
-                    previous_value = nodes.back().state.getValue();
+                    previous_value = utility.getValue( nodes.back().state );
 
                     nodes.pop_back();
                 }
@@ -160,7 +162,7 @@ public:
                     }
                     else
                     {
-                        previous_value = nodes.back().state.getValue();
+                        previous_value = utility.getValue( nodes.back().state );
                         nodes.pop_back();
                     }
                 }

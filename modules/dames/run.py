@@ -4,8 +4,8 @@ import random
 import shutil
 import subprocess
 
-min_depth = 6
-max_depth = 6
+min_depth = 2
+max_depth = 2
 opponent_skill_min = 0
 opponent_skill_max = 0
 log_filename = 'log.txt'

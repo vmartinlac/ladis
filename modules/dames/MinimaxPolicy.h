@@ -17,6 +17,7 @@ public:
 protected:
 
     int myMaxDepth;
-    Checkers::Solver mySolver;
+    Checkers::SolverN mySolver;
+    Checkers::NeuralNetworkUtilityFunction myUtility;
 };
 

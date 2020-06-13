@@ -1,4 +1,5 @@
 #include <sstream>
+#include <cmath>
 #include <iostream>
 #include "Checkers.h"
 
@@ -144,59 +145,6 @@ std::string Checkers::State::getSquareGrid() const
 bool Checkers::State::isMyTurn() const
 {
     return myIsMyTurn;
-}
-
-float Checkers::State::getValue() const
-{
-    const float end_game = 10.0f*N + 1.0f;
-
-    int my_count = 0;
-    int his_count = 0;
-    float delta = 0.0f;
-
-    for(int i=0; i<N; i++)
-    {
-        switch(myGrid[i])
-        {
-        case 'p':
-            my_count++;
-            delta += 1.0;
-            break;
-        case 'P':
-            my_count++;
-            delta += 2.1;
-            break;
-        case 'o':
-            his_count++;
-            delta -= 1.0;
-            break;
-        case 'O':
-            his_count++;
-            delta -= 2.1;
-            break;
-        case '.':
-            break;
-        default:
-            throw std::runtime_error("internal error");
-        }
-    }
-
-    float ret = 0.0f;
-
-    if( my_count > 0 && his_count == 0 )
-    {
-        ret = end_game;
-    }
-    else if(his_count > 0 && my_count == 0)
-    {
-        ret = -end_game;
-    }
-    else
-    {
-        ret = delta;
-    }
-
-    return ret;
 }
 
 std::string Checkers::Action::getText() const
@@ -391,6 +339,11 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
         {
             grid[i] = 'O';
         }
+
+        if(grid[N-1-i] == 'p')
+        {
+            grid[N-1-i] = 'P';
+        }
     }
 
     aa.action.set(count-1, trajectory);
@@ -447,6 +400,11 @@ bool Checkers::ActionIterator::enumerateNonJumpActions(int starting_cell, const 
                     if(grid[i] == 'o')
                     {
                         grid[i] = 'O';
+                    }
+
+                    if(grid[N-1-i] == 'p')
+                    {
+                        grid[N-1-i] = 'P';
                     }
                 }
 
@@ -588,6 +546,319 @@ int Checkers::getReachable(int from, int index)
     {
         ret = (SIDE*(b+delta[i1]) + a + delta[i0]) / 2;
     }
+
+    return ret;
+}
+
+float Checkers::PieceCountUtilityFunction::getValue(const State& state) const
+{
+    const float end_game = 10.0f*N + 1.0f;
+
+    int my_count = 0;
+    int his_count = 0;
+    float delta = 0.0f;
+
+    for(int i=0; i<N; i++)
+    {
+        switch(state.readCell(i))
+        {
+        case 'p':
+            my_count++;
+            delta += 1.0;
+            break;
+        case 'P':
+            my_count++;
+            delta += 2.1;
+            break;
+        case 'o':
+            his_count++;
+            delta -= 1.0;
+            break;
+        case 'O':
+            his_count++;
+            delta -= 2.1;
+            break;
+        case '.':
+            break;
+        default:
+            throw std::runtime_error("internal error");
+        }
+    }
+
+    float ret = 0.0f;
+
+    if( my_count > 0 && his_count == 0 )
+    {
+        ret = end_game;
+    }
+    else if(his_count > 0 && my_count == 0)
+    {
+        ret = -end_game;
+    }
+    else
+    {
+        ret = delta;
+    }
+
+    return ret;
+}
+
+Checkers::NeuralNetworkUtilityFunction::NeuralNetworkUtilityFunction()
+{
+    myWeights.reset(new WeightTable());
+    setDefaultWeights();
+}
+
+void Checkers::NeuralNetworkUtilityFunction::setDefaultWeights()
+{
+    static_assert(NUM_CELL_FEATURES >= 2);
+
+    for(int i=0; i<4; i++)
+    {
+        for(int j=0; j<6; j++)
+        {
+            for(int k=0; k<NUM_CELL_FEATURES; k++)
+            {
+                myWeights->local_weights_neighbors[i][j][k] = 0.0f;
+            }
+        }
+    }
+
+    for(int i=0; i<5; i++)
+    {
+        for(int j=0; j<NUM_CELL_FEATURES; j++)
+        {
+            myWeights->local_weights_center[i][j] = 0.0f;
+        }
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        myWeights->local_biaises[i] = 0.0f;
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        for(int j=0; j<N; j++)
+        {
+            myWeights->global_weights[i][j] = 0.0f;
+        }
+    }
+
+    myWeights->local_weights_center[0][0] = 1.0f;
+    myWeights->local_weights_center[1][0] = 3.0f;
+    myWeights->local_weights_center[2][1] = 1.0f;
+    myWeights->local_weights_center[3][1] = 3.0f;
+
+    for(int i=0; i<N; i++)
+    {
+        myWeights->global_weights[0][i] = 1.0;
+        myWeights->global_weights[1][i] = -1.0;
+    }
+}
+
+int Checkers::NeuralNetworkUtilityFunction::getNumWeights() const
+{
+    int ret = 0;
+    ret += 4*6*NUM_CELL_FEATURES;
+    ret += 5*NUM_CELL_FEATURES;
+    ret += NUM_CELL_FEATURES;
+    ret += NUM_CELL_FEATURES*N;
+    return ret;
+}
+
+void Checkers::NeuralNetworkUtilityFunction::setWeights(const std::vector<float>& weights)
+{
+    if(weights.size() != getNumWeights())
+    {
+        throw std::runtime_error("Incorrect weight size!");
+    }
+
+    int count = 0;
+
+    for(int i=0; i<4; i++)
+    {
+        for(int j=0; j<6; j++)
+        {
+            for(int k=0; k<NUM_CELL_FEATURES; k++)
+            {
+                myWeights->local_weights_neighbors[i][j][k] = weights[count];
+                count++;
+            }
+        }
+    }
+
+    for(int i=0; i<5; i++)
+    {
+        for(int j=0; j<NUM_CELL_FEATURES; j++)
+        {
+            myWeights->local_weights_center[i][j] = weights[count];
+            count++;
+        }
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        myWeights->local_biaises[i] = weights[count];
+        count++;
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        for(int j=0; j<N; j++)
+        {
+            myWeights->global_weights[i][j] = weights[count];
+            count++;
+        }
+    }
+}
+
+void Checkers::NeuralNetworkUtilityFunction::getWeights(std::vector<float>& weights) const
+{
+    weights.resize(getNumWeights());
+
+    int count = 0;
+
+    for(int i=0; i<4; i++)
+    {
+        for(int j=0; j<6; j++)
+        {
+            for(int k=0; k<NUM_CELL_FEATURES; k++)
+            {
+                weights[count] = myWeights->local_weights_neighbors[i][j][k];
+                count++;
+            }
+        }
+    }
+
+    for(int i=0; i<5; i++)
+    {
+        for(int j=0; j<NUM_CELL_FEATURES; j++)
+        {
+            weights[count] = myWeights->local_weights_center[i][j];
+            count++;
+        }
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        weights[count] = myWeights->local_biaises[i];
+        count++;
+    }
+
+    for(int i=0; i<NUM_CELL_FEATURES; i++)
+    {
+        for(int j=0; j<N; j++)
+        {
+            weights[count] = myWeights->global_weights[i][j];
+            count++;
+        }
+    }
+
+    if(count != weights.size())
+    {
+        throw std::runtime_error("internal error");
+    }
+}
+
+float Checkers::NeuralNetworkUtilityFunction::getValue(const State& state) const
+{
+    float ret = 0.0f;
+
+    for(int i=0; i<N; i++)
+    {
+        for(int j=0; j<NUM_CELL_FEATURES; j++)
+        {
+            float local_score = myWeights->local_biaises[j];
+
+            switch(state.readCell(i))
+            {
+            case 'p':
+                local_score += myWeights->local_weights_center[0][j];
+                break;
+            case 'P':
+                local_score += myWeights->local_weights_center[1][j];
+                break;
+            case 'o':
+                local_score += myWeights->local_weights_center[2][j];
+                break;
+            case 'O':
+                local_score += myWeights->local_weights_center[3][j];
+                break;
+            case '.':
+                local_score += myWeights->local_weights_center[4][j];
+                break;
+            default:
+                throw std::runtime_error("internal error");
+            }
+
+            for(int k=0; k<4; k++)
+            {
+                const int l = getReachable(i, k);
+
+                if(l >= 0)
+                {
+                    switch(state.readCell(l))
+                    {
+                    case 'p':
+                        local_score += myWeights->local_weights_neighbors[k][0][j];
+                        break;
+                    case 'P':
+                        local_score += myWeights->local_weights_neighbors[k][1][j];
+                        break;
+                    case 'o':
+                        local_score += myWeights->local_weights_neighbors[k][2][j];
+                        break;
+                    case 'O':
+                        local_score += myWeights->local_weights_neighbors[k][3][j];
+                        break;
+                    case '.':
+                        local_score += myWeights->local_weights_neighbors[k][4][j];
+                        break;
+                    default:
+                        throw std::runtime_error("internal error");
+                    }
+                }
+                else
+                {
+                    local_score += myWeights->local_weights_neighbors[k][5][j];
+                }
+            }
+
+            local_score = std::max<float>(0.0, local_score);
+
+            ret += myWeights->global_weights[j][i] * local_score;
+        }
+    }
+
+    /*
+    {
+        float delta = 0.0f;
+
+        for(int i=0; i<N; i++)
+        {
+            switch(state.readCell(i))
+            {
+            case 'p':
+                delta += 1.0;
+                break;
+            case 'P':
+                delta += 2.0;
+                break;
+            case 'o':
+                delta -= 1.0;
+                break;
+            case 'O':
+                delta -= 2.0;
+                break;
+            case '.':
+                break;
+            default:
+                throw std::runtime_error("internal error");
+            }
+        }
+    }
+    */
 
     return ret;
 }

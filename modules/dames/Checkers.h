@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <cstring>
 #include <algorithm>
@@ -39,7 +40,42 @@ public:
         std::string getSquareGrid() const;
         bool isMyTurn() const;
         void invert();
-        float getValue() const;
+    };
+
+    class PieceCountUtilityFunction
+    {
+    public:
+
+        float getValue(const State& state) const;
+    };
+
+    class NeuralNetworkUtilityFunction
+    {
+    public:
+
+        NeuralNetworkUtilityFunction();
+        void setDefaultWeights();
+        int getNumWeights() const;
+        void setWeights(const std::vector<float>& weights);
+        void getWeights(std::vector<float>& weights) const;
+        float getValue(const State& state) const;
+
+    protected:
+
+        static constexpr int NUM_CELL_FEATURES = 2;
+
+        struct WeightTable
+        {
+            // order: "jJoO.E"
+            float local_weights_center[5][NUM_CELL_FEATURES];
+            float local_weights_neighbors[4][6][NUM_CELL_FEATURES];
+            float local_biaises[NUM_CELL_FEATURES];
+            float global_weights[NUM_CELL_FEATURES][N];
+        };
+
+    protected:
+
+        std::unique_ptr<WeightTable> myWeights;
     };
 
     class Action
@@ -105,7 +141,8 @@ public:
         std::vector<AvailableAction> myAvailableActions;
     };
 
-    using Solver = Minimax<State, Action, ActionIterator>;
+    using SolverS = Minimax<State, PieceCountUtilityFunction, Action, ActionIterator>;
+    using SolverN = Minimax<State, NeuralNetworkUtilityFunction, Action, ActionIterator>;
 
 protected:
 

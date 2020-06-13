@@ -15,11 +15,6 @@ void tmp()
 {
     struct State
     {
-        float getValue() const
-        {
-            return score;
-        }
-
         bool isMyTurn() const
         {
             return (time % 2) == 0;
@@ -40,6 +35,14 @@ void tmp()
         int time;
         float score;
         int num_consecutive;
+    };
+
+    struct Utility
+    {
+        float getValue(const State& s) const
+        {
+            return s.score;
+        }
     };
 
     struct Action
@@ -98,8 +101,9 @@ void tmp()
         int my_next;
     };
 
-    using Solver = Minimax<State, Action, ActionIterator>;
+    using Solver = Minimax<State, Utility, Action, ActionIterator>;
 
+    Utility utility;
     State s0;
     Action a0;
     State s1;
@@ -107,7 +111,7 @@ void tmp()
     s0.num_consecutive = 0;
 
     Solver solver;
-    const bool ok = solver.solve(s0, a0, s1, 3);
+    const bool ok = solver.solve(s0, a0, s1, utility, 3);
 
     if(ok)
     {
