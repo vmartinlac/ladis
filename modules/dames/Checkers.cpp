@@ -168,11 +168,11 @@ float Checkers::State::getValue() const
             break;
         case 'o':
             his_count++;
-            delta -= 0.5;
+            delta -= 1.0;
             break;
         case 'O':
             his_count++;
-            delta -= 0.8;
+            delta -= 1.5;
             break;
         case '.':
             break;
