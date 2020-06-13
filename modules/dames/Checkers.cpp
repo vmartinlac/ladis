@@ -148,7 +148,7 @@ bool Checkers::State::isMyTurn() const
 
 float Checkers::State::getValue() const
 {
-    const float end_game = 2.0f*N + 1.0f;
+    const float end_game = 10.0f*N + 1.0f;
 
     int my_count = 0;
     int his_count = 0;
@@ -164,7 +164,7 @@ float Checkers::State::getValue() const
             break;
         case 'P':
             my_count++;
-            delta += 1.5;
+            delta += 2.1;
             break;
         case 'o':
             his_count++;
@@ -172,7 +172,7 @@ float Checkers::State::getValue() const
             break;
         case 'O':
             his_count++;
-            delta -= 1.5;
+            delta -= 2.1;
             break;
         case '.':
             break;
