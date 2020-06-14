@@ -240,7 +240,8 @@ void Checkers::ActionIterator::computeMoves(const State& state)
 
             if(piece == 'p' || piece == 'P')
             {
-                stack.resize(1);
+                stack.clear();
+                stack.emplace_back();
                 stack.back().landing_cell = cell0;
 
                 while(stack.empty() == false)
@@ -256,7 +257,7 @@ void Checkers::ActionIterator::computeMoves(const State& state)
                         const int cell1 = stack.back().landing_cell;
                         const int this_index = stack.size()-1;
 
-                        const bool found_a_jump = enumerateJumpMoves(stack, this_index, state);
+                        const bool found_a_jump = enumerateJumpMoves(state, piece, stack, this_index);
 
                         if(!found_a_jump)
                         {
@@ -273,7 +274,6 @@ void Checkers::ActionIterator::computeMoves(const State& state)
 
                             if( num_captured >= highest_capture_count )
                             {
-
                                 if( num_captured == 0 )
                                 {
                                     enumerateNonJumpActions(cell1, state);
@@ -356,6 +356,11 @@ bool Checkers::ActionIterator::enumerateNonJumpActions(int starting_cell, const 
     const int piece = state.readCell(starting_cell);
     bool ret = false;
 
+    if(piece != 'p' && piece != 'P')
+    {
+        throw std::runtime_error("internal error!");
+    }
+
     const int directions[4] = { NEIGHBOR_TOP_RIGHT, NEIGHBOR_TOP_LEFT, NEIGHBOR_BOTTOM_RIGHT, NEIGHBOR_BOTTOM_LEFT };
     const int num_directions = (piece == 'P') ? 4 : 2;
 
@@ -427,10 +432,9 @@ bool Checkers::ActionIterator::enumerateNonJumpActions(int starting_cell, const 
     return ret;
 }
 
-bool Checkers::ActionIterator::enumerateJumpMoves(std::vector<Move>& stack, int index, const State& state)
+bool Checkers::ActionIterator::enumerateJumpMoves(const State& state, char piece, std::vector<Move>& stack, int index)
 {
     const int starting_cell = stack[index].landing_cell;
-    const int piece = state.readCell(starting_cell);
     bool ret = false;
 
     for(int direction=0; direction<4; direction++)

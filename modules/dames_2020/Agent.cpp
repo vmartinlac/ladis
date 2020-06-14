@@ -105,17 +105,15 @@ void DamesAgent::typeText(LADIS::Interface* interface, const char* text)
 
 void DamesAgent::play(LADIS::Interface* interface)
 {
-    using ActionState = std::tuple<Checkers::Action, Checkers::State>;
-    using ActionStateList = std::vector<ActionState>;
-
     cv::Mat4b screen;
     Checkers::SolverN solver;
     Checkers::NeuralNetworkUtilityFunction utility;
     Checkers::ActionIterator action_iterator;
     Checkers::State current_state;
-    ActionStateList action_state_list;
     int num_consecutive_outcomes = 0;
     bool go_on = true;
+    bool has_forecast = false;
+    std::vector<Checkers::State> forecast;
 
     utility.setDefaultWeights();
 
@@ -166,6 +164,42 @@ void DamesAgent::play(LADIS::Interface* interface)
 
             if( current_state.isMyTurn() )
             {
+                
+                if(has_forecast)
+                {
+                    bool found = false;
+
+                    for(const Checkers::State& fs : forecast)
+                    {
+                        bool the_same = true;
+
+                        for(int i=0; the_same && i<Checkers::N; i++)
+                        {
+                            if(current_state.readCell(i) != fs.readCell(i))
+                            {
+                                the_same = false;
+                            }
+                        }
+
+                        if(the_same)
+                        {
+                            found = true;
+                        }
+                    }
+
+                    if(found)
+                    {
+                        std::cout << "Current state was forecast!" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "CURRENT STATE WAS NOT FORECAST!" << std::endl;
+                    }
+
+                    has_forecast = false;
+                    forecast.clear();
+                }
+
                 // Print some info to the user.
                 std::cout << "My turn!" << std::endl;
                 std::cout << current_state.getSquareGrid() << std::endl;
@@ -173,21 +207,22 @@ void DamesAgent::play(LADIS::Interface* interface)
                 // save current screen.
                 saveScreen(screen);
 
+                int num_available_actions = 0;
+
                 // Enumerate available actions.
                 {
                     action_iterator.init(current_state);
-                    action_state_list.clear();
 
                     Checkers::Action action_;
                     Checkers::State state_;
                     while(action_iterator.next(current_state, action_, state_))
                     {
-                        action_state_list.emplace_back(action_, state_);
+                        num_available_actions++;
                     }
-                    std::cout << "Number of available actions: " << action_state_list.size() << std::endl;
+                    std::cout << "Number of available actions: " << num_available_actions << std::endl;
                 }
 
-                if(action_state_list.empty())
+                if(num_available_actions == 0)
                 {
                     std::cout << "I have lost!" << std::endl;
                     myOutcome = OUTCOME_LOSE;
@@ -211,6 +246,20 @@ void DamesAgent::play(LADIS::Interface* interface)
 
                     if(ok)
                     {
+                        {
+                            action_iterator.init(resulting_state);
+                            forecast.clear();
+
+                            Checkers::Action action_;
+                            Checkers::State state_;
+                            while(action_iterator.next(resulting_state, action_, state_))
+                            {
+                                forecast.push_back(state_);
+                            }
+
+                            has_forecast = true;
+                        }
+
                         std::cout << "Move:";
                         std::stringstream ss;
                         for(int i=0; i<=action.getNumMoves(); i++)

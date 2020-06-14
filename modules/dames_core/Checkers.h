@@ -132,7 +132,7 @@ public:
     protected:
 
         void computeMoves(const State& s);
-        bool enumerateJumpMoves(std::vector<Move>& stack, int index, const State& state);
+        bool enumerateJumpMoves(const State& state, char piece, std::vector<Move>& stack, int index);
         bool enumerateNonJumpActions(int starting_cell, const State& state);
         void addActionFromStack(std::vector<Move>& stack, int index, const State& state);
 
