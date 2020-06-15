@@ -13,16 +13,16 @@ private slots:
     {
         Checkers::State s;
         s.setSquareGrid(
+            " o o o o o\n"
+            "o o o o o \n"
+            " o o o o o\n"
+            "o o o o o \n"
             " . . . . .\n"
             ". . . . . \n"
-            " . . . O .\n"
-            ". . . . . \n"
-            " . P . . .\n"
-            ". . . o . \n"
-            " . . . p .\n"
-            ". o . . . \n"
-            " . p . . .\n"
-            ". . . . p \n");
+            " p p p p p\n"
+            "p p p p p \n"
+            " p p p p p\n"
+            "p p p p p \n");
         s.setMyTurn(true);
 
         Checkers::SolverN solver;
@@ -32,7 +32,7 @@ private slots:
         Checkers::Action action;
         Checkers::State resulting_state;
 
-        const bool ok = solver.solve(s, action, resulting_state, utility, 3);
+        const bool ok = solver.solve(s, action, resulting_state, utility, 4);
 
         QVERIFY(ok);
 

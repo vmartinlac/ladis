@@ -174,6 +174,12 @@ public:
                     if(prune)
                     {
                         previous_value = nodes.back().best_value;
+
+                        if(myDebug)
+                        {
+                            nodes.back().state.makeDebugNodeSpec(debug_stream, nodes.back().makeDebugNodeName(), previous_value);
+                        }
+
                         nodes.pop_back();
                     }
                     else if( nodes.back().action_iterator.next(nodes.back().state, next_action, next_state) )
