@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include "Minimax.h"
+#include <opencv2/core.hpp>
 
 class Checkers
 {
@@ -40,6 +41,8 @@ public:
         std::string getSquareGrid() const;
         bool isMyTurn() const;
         void invert();
+        cv::Mat1b makePicture() const;
+        void makeDebugNodeSpec(std::ostream& s, const std::string& node_name, float value) const;
     };
 
     class PieceCountUtilityFunction
@@ -92,6 +95,7 @@ public:
         int getTrajectory(int i) const;
         void invert();
         std::string getText() const;
+        void makeDebugEdgeSpec(std::ostream& s, const std::string& node0, const std::string& node1) const;
     };
 
     class ActionIterator

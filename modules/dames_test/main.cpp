@@ -1,4 +1,5 @@
 #include <iostream>
+#include <opencv2/imgcodecs.hpp>
 #include <QtTest/QtTest>
 #include <Checkers.h>
 
@@ -7,6 +8,37 @@ class DamesTest : public QObject
     Q_OBJECT
 
 private slots:
+
+    void testPicture()
+    {
+        Checkers::State s;
+        s.setSquareGrid(
+            " . . . . .\n"
+            ". . . . . \n"
+            " . . . O .\n"
+            ". . . . . \n"
+            " . P . . .\n"
+            ". . . o . \n"
+            " . . . p .\n"
+            ". o . . . \n"
+            " . p . . .\n"
+            ". . . . p \n");
+        s.setMyTurn(true);
+
+        Checkers::SolverN solver;
+        solver.setDebug(true);
+        Checkers::NeuralNetworkUtilityFunction utility;
+
+        Checkers::Action action;
+        Checkers::State resulting_state;
+
+        const bool ok = solver.solve(s, action, resulting_state, utility, 3);
+
+        QVERIFY(ok);
+
+        cv::Mat3b img = s.makePicture();
+        cv::imwrite("hello.png", img);
+    }
 
     void testSolver()
     {

@@ -1,7 +1,88 @@
 #include <sstream>
 #include <cmath>
 #include <iostream>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include "Checkers.h"
+
+cv::Mat1b Checkers::State::makePicture() const
+{
+    const int width = 128;
+    const int height = 128;
+
+    cv::Mat3b ret(height, width);
+
+    ret = cv::Vec3b(16, 16, 16);
+
+    for(int i=0; i<SIDE; i++)
+    {
+        for(int j=0; j<SIDE; j++)
+        {
+            const cv::Point A(
+                j*width/SIDE,
+                i*height/SIDE);
+
+            const cv::Point B(
+                (j+1)*width/SIDE,
+                (i+1)*height/SIDE);
+
+            const cv::Rect rect(A, B);
+
+            const bool in_cell = (SIDE-1-j + (i % 2)) % 2 == 0;
+
+            if(in_cell)
+            {
+                const int cell = (SIDE/2)*(SIDE-1-i) + (SIDE-1-j)/2;
+
+                if(0 > cell || cell >= N)
+                {
+                    throw std::runtime_error("internal error");
+                }
+
+                ret(rect) = cv::Vec3b(64, 64, 64);
+
+                if(readCell(cell) != '.')
+                {
+                    const cv::Point center(
+                        (2*j+1)*width/(2*SIDE),
+                        (2*i+1)*height/(2*SIDE));
+
+                    cv::Vec3b color(255, 255, 255);
+                    double thickness = 1;
+                    double radius = 0.0;
+
+                    switch(readCell(cell))
+                    {
+                    case 'o':
+                    case 'O':
+                        color = cv::Vec3b(227, 0, 255);
+                        break;
+                    case 'p':
+                    case 'P':
+                        color = cv::Vec3b(18, 220, 252);
+                        break;
+                    default:
+                        throw std::runtime_error("internal error!");
+                    }
+
+                    radius = std::min(width/(2*SIDE), height/(2*SIDE)) - 2;
+
+                    cv::circle(ret, center, radius, color, -1);
+
+                    switch(readCell(cell))
+                    {
+                    case 'P':
+                    case 'O':
+                        cv::circle(ret, center, radius/2, cv::Vec3b(0,0,0), -1);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return ret;
+}
 
 bool Checkers::State::areTherePlayerPieces() const
 {
@@ -865,5 +946,75 @@ float Checkers::NeuralNetworkUtilityFunction::getValue(const State& state) const
     */
 
     return ret;
+}
+
+void Checkers::Action::makeDebugEdgeSpec(std::ostream& s, const std::string& node0, const std::string& node1) const
+{
+    s << node0 << " -> " << node1 << " [";
+    s << "label=\"";
+    for(int i=0; i<=myNumMoves; i++)
+    {
+        if(i > 0)
+        {
+            s << '-';
+        }
+        s << myTrajectory[i];
+    }
+    s << "\"";
+    s << "]" << std::endl;
+}
+
+void Checkers::State::makeDebugNodeSpec(std::ostream& s, const std::string& node_name, float value) const
+{
+    static int i=0;
+    std::stringstream image_path;
+    image_path << "image_" << i << ".png";
+    i++;
+
+    cv::Mat3b image = makePicture();
+
+    cv::imwrite(image_path.str(), image);
+
+    s << node_name << " [";
+    s << "label=<";
+    s << "<table border=\"0px\">";
+
+    s << "<tr>";
+    s << "<td>";
+    s << "<img src=\"" << image_path.str() << "\" />";
+    s << "</td>";
+    s << "</tr>";
+
+    s << "<tr>";
+    s << "<td>";
+    if(myIsMyTurn)
+    {
+        s << "MAX";
+    }
+    else
+    {
+        s << "MIN";
+    }
+    s << "</td>";
+    s << "</tr>";
+
+    s << "<tr>";
+    s << "<td>";
+    s << value;
+    s << "</td>";
+    s << "</tr>";
+
+    s << "</table>";
+    s << ">";
+    s << " shape=box style=filled";
+    if(myIsMyTurn)
+    {
+        s << " fillcolor=green";
+    }
+    else
+    {
+        s << " fillcolor=red";
+    }
+    s << "]" << std::endl;
 }
 
