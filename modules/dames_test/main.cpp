@@ -2,6 +2,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <QtTest/QtTest>
 #include <Checkers.h>
+#include <GraphVizHook.h>
 
 class DamesTest : public QObject
 {
@@ -25,19 +26,18 @@ private slots:
             "p p p p p \n");
         s.setMyTurn(true);
 
-        Checkers::SolverN solver;
-        solver.setDebug(true);
-        Checkers::NeuralNetworkUtilityFunction utility;
+        GraphVizHook hook;
+
+        Checkers::Solver solver;
+        solver.resetHook(&hook);
+        Checkers::UtilityFunction utility;
 
         Checkers::Action action;
         Checkers::State resulting_state;
 
-        const bool ok = solver.solve(s, action, resulting_state, utility, 4);
+        const bool ok = solver.solve(s, action, resulting_state, utility, 3);
 
         QVERIFY(ok);
-
-        cv::Mat3b img = s.makePicture();
-        cv::imwrite("hello.png", img);
     }
 
     void testSolver()
@@ -85,8 +85,8 @@ private slots:
             points.back().move.assign({11, 22, 31});
         }
 
-        Checkers::SolverN solver;
-        Checkers::NeuralNetworkUtilityFunction utility;
+        Checkers::Solver solver;
+        Checkers::UtilityFunction utility;
 
         for(const Point& pt : points)
         {

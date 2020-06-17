@@ -1,17 +1,11 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <vector>
 #include <stdexcept>
 
 /*
 float State::getValue() const;
 bool State::isMyTurn() const;
-void State::makeDebugNodeSpec(std::ostream& s, const std::string& node_name, float value) const;
-
-void Action::makeDebugEdgeSpec(std::ostream& s, const std::string& node0, const std::string& node1) const;
 
 float UtilityFunction::getValue(const State& s) const;
 
@@ -38,11 +32,6 @@ protected:
             nodeid = -1;
         }
 
-        std::string makeDebugNodeName() const
-        {
-            return std::string("n") + std::to_string(nodeid);
-        }
-
         State state;
         ActionIterator action_iterator;
 
@@ -60,14 +49,35 @@ protected:
 
 public:
 
+    class Hook
+    {
+    public:
+
+        virtual void hookStarted()
+        {
+        }
+
+        virtual void hookFinished()
+        {
+        }
+
+        virtual void hookCompletedNode(const State& s, int nodeid, float value)
+        {
+        }
+
+        virtual void hookFoundEdge(const Action& action, int nodeid_from, int nodeid_to)
+        {
+        }
+    };
+
     Minimax()
     {
-        myDebug = false;
+        myHook = nullptr;
     }
 
-    void setDebug(bool x)
+    void resetHook(Hook* hook=nullptr)
     {
-        myDebug = x;
+        myHook = hook;
     }
 
     bool solve(const State& initial_state, Action& action, State& resulting_state, UtilityFunction& utility, int max_depth)
@@ -76,6 +86,11 @@ public:
 
         if( initial_state.isMyTurn() )
         {
+            if(myHook)
+            {
+                myHook->hookStarted();
+            }
+
             std::vector<Node> nodes;
             nodes.reserve(max_depth);
 
@@ -87,14 +102,6 @@ public:
             Action candidate_action;
             State candidate_state;
 
-            //std::stringstream debug_stream;
-            std::ofstream debug_stream;
-            if(myDebug)
-            {
-                debug_stream.open("graph.dot");
-                debug_stream << "digraph {" << std::endl;
-            }
-
             int node_count = 1;
 
             while(nodes.empty() == false)
@@ -103,9 +110,12 @@ public:
                 {
                     previous_value = utility.getValue( nodes.back().state );
 
-                    if(myDebug)
+                    if(myHook)
                     {
-                        nodes.back().state.makeDebugNodeSpec(debug_stream, nodes.back().makeDebugNodeName(), previous_value);
+                        myHook->hookCompletedNode(
+                            nodes.back().state,
+                            nodes.back().nodeid,
+                            previous_value);
                     }
 
                     nodes.pop_back();
@@ -175,9 +185,12 @@ public:
                     {
                         previous_value = nodes.back().best_value;
 
-                        if(myDebug)
+                        if(myHook)
                         {
-                            nodes.back().state.makeDebugNodeSpec(debug_stream, nodes.back().makeDebugNodeName(), previous_value);
+                            myHook->hookCompletedNode(
+                                nodes.back().state,
+                                nodes.back().nodeid,
+                                previous_value);
                         }
 
                         nodes.pop_back();
@@ -201,18 +214,24 @@ public:
                         nodes.back().nodeid = node_count;
                         node_count++;
 
-                        if(myDebug)
+                        if(myHook)
                         {
-                            next_action.makeDebugEdgeSpec( debug_stream, nodes[nodes.size()-2].makeDebugNodeName(), nodes.back().makeDebugNodeName() );
+                            myHook->hookFoundEdge(
+                                next_action,
+                                nodes[nodes.size()-2].nodeid,
+                                nodes[nodes.size()-1].nodeid);
                         }
                     }
                     else if(nodes.back().has_best_value)
                     {
                         previous_value = nodes.back().best_value;
 
-                        if(myDebug)
+                        if(myHook)
                         {
-                            nodes.back().state.makeDebugNodeSpec(debug_stream, nodes.back().makeDebugNodeName(), previous_value);
+                            myHook->hookCompletedNode(
+                                nodes.back().state,
+                                nodes.back().nodeid,
+                                previous_value);
                         }
 
                         nodes.pop_back();
@@ -221,9 +240,12 @@ public:
                     {
                         previous_value = utility.getValue( nodes.back().state );
 
-                        if(myDebug)
+                        if(myHook)
                         {
-                            nodes.back().state.makeDebugNodeSpec(debug_stream, nodes.back().makeDebugNodeName(), previous_value);
+                            myHook->hookCompletedNode(
+                                nodes.back().state,
+                                nodes.back().nodeid,
+                                previous_value);
                         }
 
                         nodes.pop_back();
@@ -231,9 +253,9 @@ public:
                 }
             }
 
-            if(myDebug)
+            if(myHook)
             {
-                debug_stream << "}" << std::endl;
+                myHook->hookFinished();
             }
         }
 
@@ -242,6 +264,6 @@ public:
 
 protected:
 
-    bool myDebug;
+    Hook* myHook;
 };
 

@@ -106,8 +106,8 @@ void DamesAgent::typeText(LADIS::Interface* interface, const char* text)
 void DamesAgent::play(LADIS::Interface* interface)
 {
     cv::Mat4b screen;
-    Checkers::SolverN solver;
-    Checkers::NeuralNetworkUtilityFunction utility;
+    Checkers::Solver solver;
+    Checkers::UtilityFunction utility;
     Checkers::ActionIterator action_iterator;
     Checkers::State current_state;
     int num_consecutive_outcomes = 0;

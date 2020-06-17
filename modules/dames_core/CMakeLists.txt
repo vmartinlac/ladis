@@ -5,6 +5,8 @@ add_library(
     Minimax.h
     Checkers.h
     Checkers.cpp
+    GraphVizHook.h
+    GraphVizHook.cpp
     MinimaxPolicy.h
     MinimaxPolicy.cpp
     UniformPolicy.h

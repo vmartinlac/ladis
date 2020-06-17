@@ -41,22 +41,13 @@ public:
         std::string getSquareGrid() const;
         bool isMyTurn() const;
         void invert();
-        cv::Mat1b makePicture() const;
-        void makeDebugNodeSpec(std::ostream& s, const std::string& node_name, float value) const;
     };
 
-    class PieceCountUtilityFunction
+    class UtilityFunction
     {
     public:
 
-        float getValue(const State& state) const;
-    };
-
-    class NeuralNetworkUtilityFunction
-    {
-    public:
-
-        NeuralNetworkUtilityFunction();
+        UtilityFunction();
         void setDefaultWeights();
         int getNumWeights() const;
         void setWeights(const std::vector<float>& weights);
@@ -145,8 +136,7 @@ public:
         std::vector<AvailableAction> myAvailableActions;
     };
 
-    using SolverS = Minimax<State, PieceCountUtilityFunction, Action, ActionIterator>;
-    using SolverN = Minimax<State, NeuralNetworkUtilityFunction, Action, ActionIterator>;
+    using Solver = Minimax<State, UtilityFunction, Action, ActionIterator>;
 
 protected:
 
