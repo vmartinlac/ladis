@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <random>
 #include <memory>
 #include <vector>
 #include <cstring>
@@ -48,6 +49,7 @@ public:
     public:
 
         UtilityFunction();
+        void setFromCrossover(const UtilityFunction& parent0, const UtilityFunction& parent1, std::default_random_engine& engine);
         void setDefaultWeights();
         int getNumWeights() const;
         void setWeights(const std::vector<float>& weights);

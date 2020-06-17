@@ -103,6 +103,8 @@ private slots:
 
             if(ok)
             {
+                std::cout << newstate.getSquareGrid() << std::endl;
+
                 QVERIFY(action.getNumMoves()+1 == pt.move.size());
 
                 if(action.getNumMoves()+1 == pt.move.size())

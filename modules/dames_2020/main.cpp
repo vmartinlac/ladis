@@ -11,6 +11,154 @@
 #include "UniformPolicy.h"
 #include "MinimaxPolicy.h"
 
+class UtilityFunctionGeneticOptimizer
+{
+public:
+
+    UtilityFunctionGeneticOptimizer()
+    {
+        myPopulationSize = 500;
+        myNumGenerations = 20;
+        myMaxDepth = 5;
+        myMaxNumTurns = 250;
+        myDeathRate = 0.5;
+        myEngine.seed(1234);
+    }
+
+    void run(Checkers::UtilityFunction& best)
+    {
+        std::vector<Individual> population(myPopulationSize);
+
+        for(int i=0; i<myPopulationSize; i++)
+        {
+            population[i].num_victories = 0;
+        }
+
+        for(int generation=0; generation<myNumGenerations; generation++)
+        {
+            for(int i=0; i<myPopulationSize; i++)
+            {
+                population[i].num_victories = 0;
+            }
+
+            // evaluate fitness.
+
+            for(int i=0; i<myPopulationSize; i++)
+            {
+                for(int j=0; j<myPopulationSize; j++)
+                {
+                    if(i != j)
+                    {
+                        fight(population[i], population[j]);
+                    }
+                }
+            }
+
+            // select and reproduce best individuals.
+
+            for(int i=0; i<int(myDeathRate*myPopulationSize); i++)
+            {
+                //myPopulationSize[i].utility;
+            }
+        }
+    }
+
+protected:
+
+    struct Individual
+    {
+        Individual()
+        {
+            num_victories = 0;
+            utility.setDefaultWeights();
+        }
+
+        Checkers::UtilityFunction utility;
+        int num_victories;
+    };
+
+protected:
+
+    void fight(Individual& player0, Individual& player1)
+    {
+        Checkers::State current_state;
+        current_state.setSquareGrid(
+            " o o o o o\n"
+            "o o o o o \n"
+            " o o o o o\n"
+            "o o o o o \n"
+            " . . . . .\n"
+            ". . . . . \n"
+            " p p p p p\n"
+            "p p p p p \n"
+            " p p p p p\n"
+            "p p p p p \n");
+        current_state.setMyTurn(true);
+
+        bool go_on = true;
+        int num_turns = 0;
+
+        while(go_on)
+        {
+            if(current_state.isMyTurn())
+            {
+                Checkers::State new_state;
+                Checkers::Action action;
+
+                const bool ok = mySolver.solve(current_state, action, new_state, player0.utility, myMaxDepth);
+
+                if(ok)
+                {
+                    current_state = new_state;
+                }
+                else
+                {
+                    player1.num_victories += 2;
+                    go_on = false;
+                }
+            }
+            else
+            {
+                current_state.invert();
+
+                Checkers::State new_state;
+                Checkers::Action action;
+
+                const bool ok = mySolver.solve(current_state, action, new_state, player1.utility, myMaxDepth);
+
+                if(ok)
+                {
+                    current_state = new_state;
+                    current_state.invert();
+                }
+                else
+                {
+                    player0.num_victories += 2;
+                }
+            }
+
+            num_turns++;
+
+            if(num_turns > myMaxNumTurns)
+            {
+                player0.num_victories++;
+                player1.num_victories++;
+                go_on = false;
+            }
+        }
+    }
+
+protected:
+
+    Checkers::Solver mySolver;
+    int myPopulationSize;
+    int myNumGenerations;
+    int myMaxDepth;
+    int myMaxNumTurns;
+    float myDeathRate;
+    std::default_random_engine myEngine;
+};
+
 void tmp2()
 {
     const char* initial_grid =
@@ -128,13 +276,8 @@ void produce_stats()
 
 int main(int num_args, char** args)
 {
-    if(num_args != 3)
-    {
-        throw std::runtime_error("bad command line!");
-    }
-
-    const int depth = atoi(args[1]);
-    const int opponent_skill = atoi(args[2]);
+    const int depth = 4;
+    const int opponent_skill = 0;
 
     DamesAgent agent;
     agent.setSaveScreens(true);
