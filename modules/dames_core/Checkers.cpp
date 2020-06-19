@@ -1,6 +1,18 @@
 #include <cmath>
 #include "Checkers.h"
 
+bool Checkers::State::operator==(const State& other) const
+{
+    bool ret = false;
+
+    if(myIsMyTurn == other.myIsMyTurn)
+    {
+        ret = std::equal(myGrid, myGrid+N, other.myGrid);
+    }
+
+    return ret;
+}
+
 bool Checkers::State::areTherePlayerPieces() const
 {
     const char* const begin = myGrid;
@@ -143,6 +155,18 @@ std::string Checkers::State::getSquareGrid() const
 bool Checkers::State::isMyTurn() const
 {
     return myIsMyTurn;
+}
+
+bool Checkers::Action::operator==(const Action& other) const
+{
+    bool ret = false;
+
+    if(other.myNumMoves == myNumMoves)
+    {
+        ret = std::equal(myTrajectory, myTrajectory+myNumMoves, other.myTrajectory);
+    }
+
+    return ret;
 }
 
 std::string Checkers::Action::getText() const

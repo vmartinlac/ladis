@@ -19,16 +19,143 @@ namespace LADIS
             with_ui = false;
         }
 
-        Agent* agent;
         bool with_ui;
         std::mutex image_mutex;
         cv::Mat4b image;
         std::mutex events_mutex;
         std::queue<LADIS_Event> event_queue;
+
+        std::thread thread_dosbox;
+
+        Agent* agent;
         std::thread thread_ai;
     };
 
     static std::unique_ptr<Internals> internals;
+
+    //
+
+    class EmulatorImpl : public Emulator
+    {
+    public:
+
+        void pushEvent(const LADIS_Event& ev)
+        {
+            internals->events_mutex.lock();
+            internals->event_queue.push(ev);
+            internals->events_mutex.unlock();
+        }
+
+        void start(bool with_ui) override
+        {
+            auto proc = [] ()
+            {
+                DOSBOX_main();
+            };
+
+            if(internals)
+            {
+                throw std::runtime_error("already initialized");
+            }
+
+            internals.reset(new Internals());
+            internals->with_ui = with_ui;
+            internals->thread_dosbox = std::thread(proc);
+        }
+
+        void quit() override
+        {
+            if(!internals)
+            {
+                throw std::runtime_error("not initialized");
+            }
+
+            LADIS_Event ev;
+            ev.type = LADIS_EVENT_QUIT;
+            pushEvent(ev);
+
+            internals->thread_dosbox.join();
+            internals.reset();
+        }
+
+        void getCurrentImage(cv::Mat4b& image) override
+        {
+            internals->image_mutex.lock();
+            image = internals->image.clone();
+            internals->image_mutex.unlock();
+
+            for(cv::Vec4b& pix : image)
+            {
+                pix[3] = 255;
+            }
+        }
+
+        void mouseMove(int dx, int dy) override
+        {
+            LADIS_Event ev;
+
+            ev.type = LADIS_EVENT_MOUSE_MOVED;
+            ev.dx = dx;
+            ev.dy = dy;
+
+            pushEvent(ev);
+        }
+
+        void mouseUp(int button) override
+        {
+            LADIS_Event ev;
+
+            ev.type = LADIS_EVENT_MOUSE_BUTTON_UP;
+            ev.button = button;
+
+            pushEvent(ev);
+        }
+
+        void mouseDown(int button) override
+        {
+            LADIS_Event ev;
+
+            ev.type = LADIS_EVENT_MOUSE_BUTTON_DOWN;
+            ev.button = button;
+
+            pushEvent(ev);
+        }
+
+        void keyUp(int key) override
+        {
+            LADIS_Event ev;
+
+            ev.type = LADIS_EVENT_KEY_UP;
+            ev.key = key;
+
+            pushEvent(ev);
+        }
+
+        void keyDown(int key) override
+        {
+            LADIS_Event ev;
+
+            ev.type = LADIS_EVENT_KEY_DOWN;
+            ev.key = key;
+
+            pushEvent(ev);
+        }
+
+    };
+
+    Emulator& Emulator::getInstance()
+    {
+        static std::unique_ptr<EmulatorImpl> emulator;
+
+        if(!emulator)
+        {
+            emulator.reset(new EmulatorImpl());
+        }
+
+        return *emulator;
+    }
+
+///////
 
     class InterfaceImpl : public Interface
     {

@@ -27,5 +27,21 @@ namespace LADIS
     };
 
     void run(Agent* agent, bool with_ui = true);
+
+    class Emulator
+    {
+    public:
+
+        static Emulator& getInstance();
+
+        virtual void start(bool with_ui) = 0;
+        virtual void quit() = 0;
+        virtual void getCurrentImage(cv::Mat4b& image) = 0;
+        virtual void mouseMove(int dx, int dy) = 0;
+        virtual void mouseUp(int button) = 0;
+        virtual void mouseDown(int button) = 0;
+        virtual void keyUp(int key) = 0;
+        virtual void keyDown(int key) = 0;
+    };
 }
 
