@@ -3,12 +3,54 @@
 #include <QtTest/QtTest>
 #include <Checkers.h>
 #include <GraphVizHook.h>
+#include <StateSequence.h>
 
 class DamesTest : public QObject
 {
     Q_OBJECT
 
 private slots:
+
+    void testSerialize()
+    {
+        const std::string filename = "sequence.json";
+        std::vector<Checkers::State> sequence0;
+        std::vector<Checkers::State> sequence1;
+
+        sequence0.emplace_back();
+        sequence0.back().setSquareGrid(
+            " o o o o o\n"
+            "o o o o o \n"
+            " o o o o o\n"
+            "P o o o o \n"
+            " . . . . .\n"
+            ". . . . . \n"
+            " p p p p p\n"
+            "p O p p p \n"
+            " p p p p p\n"
+            "p p p p p \n");
+        sequence0.back().setMyTurn(true);
+
+        sequence0.emplace_back();
+        sequence0.back().setSquareGrid(
+            " o . o . o\n"
+            ". o . o . \n"
+            " . o . o .\n"
+            "P . o . o \n"
+            " . . . . .\n"
+            ". . . . . \n"
+            " p . p . p\n"
+            ". O . p . \n"
+            " . p . p .\n"
+            "p . p . p \n");
+        sequence0.back().setMyTurn(true);
+
+        StateSequence::save(sequence0, filename);
+        StateSequence::load(filename, sequence1);
+
+        QVERIFY(sequence0.size() == sequence1.size());
+        QVERIFY( std::equal(sequence0.begin(), sequence0.end(), sequence1.begin()) );
+    }
 
     void testPicture()
     {

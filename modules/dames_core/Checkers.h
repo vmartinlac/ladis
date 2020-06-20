@@ -40,6 +40,7 @@ public:
         void setSquareGrid(const char* grid);
         char readCell(int i) const;
         std::string getSquareGrid() const;
+        std::string getFlatGrid() const;
         bool isMyTurn() const;
         void invert();
         bool operator==(const State& other) const;

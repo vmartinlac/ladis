@@ -34,6 +34,14 @@ void Checkers::State::setMyTurn(bool my_turn)
     myIsMyTurn = my_turn;
 }
 
+std::string Checkers::State::getFlatGrid() const
+{
+    char buffer[N+1];
+    std::copy(myGrid, myGrid+N, buffer);
+    buffer[N] = 0;
+    return std::string(buffer);
+}
+
 void Checkers::State::setFlatGrid(const char* grid)
 {
     for(int i=0; i<N; i++)

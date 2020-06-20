@@ -3,13 +3,115 @@
 #include <fstream>
 #include <random>
 #include <iostream>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "Arena.h"
 #include "MinimaxAgent.h"
 #include "UniformAgent.h"
+#include "StateSequence.h"
+#include "EpsilonGreedyAgent.h"
+
+void generateEnvironmentSamples()
+{
+    RNGPtr rng = std::make_shared<RNG>();
+
+    Arena& arena = Arena::getInstance();
+
+    arena.start();
+
+    MinimaxAgent agent0;
+    agent0.setMaxDepth(5);
+
+    UniformAgent agent1;
+    agent1.setRNG(rng);
+
+    EpsilonGreedyAgent agent2;
+    agent2.setEpsilon(0.1);
+    agent2.setGreedyAgent(&agent0);
+    agent2.setRandomAgent(&agent1);
+    agent2.setRNG(rng);
+
+    std::vector<Agent*> agents{&agent0, &agent1, &agent2};
+
+    int file_count = 0;
+
+    while(true)
+    {
+        const int opponent_skill = 0;
+        const bool agent_starts( (*rng)() % 2 );
+        const int agent_index = (*rng)() % agents.size();
+
+        arena.setAgentStarts(agent_starts);
+        arena.setOpponentSkill(opponent_skill);
+        arena.play(agents[agent_index]);
+
+        std::string result;
+
+        switch(arena.getOutcome())
+        {
+        case Arena::OUTCOME_WIN:
+            result = "win";
+            break;
+        case Arena::OUTCOME_LOSE:
+            result = "lose";
+            break;
+        case Arena::OUTCOME_DRAW:
+            result = "draw";
+            break;
+        case Arena::OUTCOME_ILLEGAL_AGENT_MOVE:
+            result = "illegal_agent_move";
+            break;
+        case Arena::OUTCOME_ILLEGAL_OPPONENT_MOVE:
+            result = "illegal_opponent_move";
+            break;
+        case Arena::OUTCOME_ERROR:
+            result = "error";
+            break;
+        default:
+            throw std::runtime_error("internal error");
+        }
+
+        std::cout << "GAME ENDED: " << result << std::endl;
+
+        {
+            std::string metadata_fname;
+            std::string log_fname;
+
+            bool go_on = true;
+            while(go_on)
+            {
+                metadata_fname = "metadata_" + std::to_string(file_count) + ".txt";
+                log_fname = "log_" + std::to_string(file_count) + ".txt";
+                file_count++;
+
+                struct stat stats;
+                const int r0 = stat(metadata_fname.c_str(), &stats);
+                const int r1 = stat(log_fname.c_str(), &stats);
+
+                go_on = bool(r0) || bool(r1);
+            }
+
+            std::ofstream f(metadata_fname.c_str());
+            f << opponent_skill << std::endl;
+            f << agent_starts << std::endl;
+            f << agent_index << std::endl;
+            f << result << std::endl;
+            f.close();
+
+            StateSequence::save(arena.refLog(), log_fname.c_str());
+        }
+    }
+
+    arena.quit();
+}
+
+void evaluateModel()
+{
+    // compare how well the model predicts DA2020 moves.
+}
 
 void trainReinforcementLearningAgentAgainstMinimax()
 {
-    ;
 }
 
 void learnDA2020Model()
@@ -174,50 +276,7 @@ protected:
 
 int main(int num_args, char** args)
 {
-    Arena& arena = Arena::getInstance();
-
-    arena.start();
-
-    MinimaxAgent agent;
-    agent.setMaxDepth(4);
-
-    UniformAgent agent2;
-
-    arena.setOpponentSkill(0);
-    while(true)
-    {
-        arena.play(&agent2);
-
-        std::string result;
-
-        switch(arena.getOutcome())
-        {
-        case Arena::OUTCOME_WIN:
-            result = "win";
-            break;
-        case Arena::OUTCOME_LOSE:
-            result = "lose";
-            break;
-        case Arena::OUTCOME_DRAW:
-            result = "draw";
-            break;
-        case Arena::OUTCOME_ILLEGAL_AGENT_MOVE:
-            result = "illegal_agent_move";
-            break;
-        case Arena::OUTCOME_ILLEGAL_OPPONENT_MOVE:
-            result = "illegal_opponent_move";
-            break;
-        case Arena::OUTCOME_ERROR:
-            result = "error";
-            break;
-        default:
-            throw std::runtime_error("internal error");
-        }
-
-        std::cout << "GAME ENDED: " << result << std::endl;
-    }
-
-    arena.quit();
+    generateEnvironmentSamples();
 
     return 0;
 }

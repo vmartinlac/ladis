@@ -2,12 +2,11 @@
 
 UniformAgent::UniformAgent()
 {
-    myEngine.seed(1234);
 }
 
-void UniformAgent::seed(int s)
+void UniformAgent::setRNG(RNGPtr rng)
 {
-    myEngine.seed(s);
+    myRNG = std::move(rng);
 }
 
 void UniformAgent::beforeEpisode()
@@ -36,7 +35,7 @@ bool UniformAgent::getAction(const Checkers::State& s, Checkers::Action& a)
 
     if(!myActions.empty())
     {
-        a = myActions[myEngine() % myActions.size()];
+        a = myActions[(*myRNG)() % myActions.size()];
         ret = true;
     }
 

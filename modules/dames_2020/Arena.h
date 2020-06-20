@@ -24,10 +24,14 @@ public:
     void start();
     void quit();
 
+    void setMaxNumTurns(int value);
     void setSaveScreens(bool value);
     void setOpponentSkill(int skill);
+    void setAgentStarts(bool value);
 
     void play(Agent* agent);
+
+    const std::vector<Checkers::State>& refLog() const;
 
     Outcome getOutcome();
 
@@ -35,6 +39,7 @@ protected:
 
     Arena();
     void typeText(const char* text);
+    void pressKey(int key);
     void extractCell(const cv::Mat4b& screen, int no, cv::Mat4b& cell);
     void computeFeatures(const cv::Mat4b& roi, cv::Vec6f& features);
     char predictCell(const cv::Vec6f& features);
@@ -52,5 +57,8 @@ protected:
     int myOpponentSkill;
     Outcome myOutcome;
     bool mySaveScreens;
+    bool myAgentStarts;
+    int myMaxNumTurns;
+    std::vector<Checkers::State> myLog;
 };
 

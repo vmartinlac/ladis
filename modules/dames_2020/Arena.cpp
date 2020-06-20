@@ -7,7 +7,25 @@
 #include "Arena.h"
 #include "Checkers.h"
 
+/*
+TODO
++ exit when maximum number of turns is reached.
++ investigate why some opponent's moves were not predicted.
++ fill log state sequence.
+*/
+
 std::unique_ptr<Arena> Arena::myInstance;
+
+const std::vector<Checkers::State>& Arena::refLog() const
+{
+    return myLog;
+}
+
+void Arena::pressKey(int key)
+{
+    LADIS::Emulator::getInstance().keyDown(key);
+    LADIS::Emulator::getInstance().keyUp(key);
+}
 
 Arena& Arena::getInstance()
 {
@@ -34,7 +52,7 @@ void Arena::start()
 
     // skip intro.
     typeText("\n");
-    //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void Arena::quit()
@@ -44,6 +62,7 @@ void Arena::quit()
 
 Arena::Arena()
 {
+    myMaxNumTurns = 200;
     myOpponentSkill = 0;
     mySaveScreens = true;
     myScreenshotCount = 0;
@@ -158,22 +177,44 @@ void Arena::play(Agent* agent)
     std::vector<ActionStatePair> action_state_list;
 
     myOutcome = OUTCOME_ERROR;
+    myLog.clear();
 
     // select difficulty and start playing.
     {
         if( 0 <= myOpponentSkill && myOpponentSkill <= 5 )
         {
-            char buffer[3];
-            buffer[0] = '0' + myOpponentSkill;
-            buffer[1] = '\n';
-            buffer[2] = 0;
-            typeText(buffer);
+            pressKey(LADIS_KEY_0 + myOpponentSkill);
+            if(myAgentStarts)
+            {
+                pressKey(LADIS_KEY_F2);
+            }
+            pressKey(LADIS_KEY_RETURN);
+
             std::this_thread::sleep_for(std::chrono::milliseconds(3000));
         }
         else
         {
             throw std::runtime_error("internal error");
         }
+    }
+
+    if(!myAgentStarts)
+    {
+        Checkers::State s;
+        s.setSquareGrid(
+            " o o o o o\n"
+            "o o o o o \n"
+            " o o o o o\n"
+            "P o o o o \n"
+            " . . . . .\n"
+            ". . . . . \n"
+            " p p p p p\n"
+            "p O p p p \n"
+            " p p p p p\n"
+            "p p p p p \n");
+        s.setMyTurn(false);
+
+        myLog.push_back(s);
     }
 
     while(go_on)
@@ -183,7 +224,7 @@ void Arena::play(Agent* agent)
         if(tryExtractOutcome(screen))
         {
             num_consecutive_outcomes++;
-            go_on = (num_consecutive_outcomes <= 3);
+            go_on = (num_consecutive_outcomes <= 2);
         }
         else
         {
@@ -253,7 +294,6 @@ void Arena::play(Agent* agent)
 
                     const bool ok = agent->getAction(current_state, action);
 
-
                     if(ok)
                     {
                         auto pred = [&action] (const ActionStatePair& item)
@@ -293,7 +333,7 @@ void Arena::play(Agent* agent)
                         std::stringstream ss;
                         for(int i=0; i<=action.getNumMoves(); i++)
                         {
-                            const int cell = action.getTrajectory(i) + 1;
+                            const int cell = (myAgentStarts) ? (Checkers::N-action.getTrajectory(i)) : (action.getTrajectory(i) + 1);
                             ss << cell << '\n';
                             std::cout << ' ' << cell;
                         }
@@ -408,7 +448,7 @@ void Arena::computeFeatures(const cv::Mat4b& picture, cv::Vec6f& features)
 
 char Arena::predictCell(const cv::Vec6f& features)
 {
-    const char* values = ".pPoO";
+    const char* values = (myAgentStarts) ? ".oOpP" : ".pPoO";
 
     /*
     empty [[ 4.44089210e-16 -1.11022302e-16  6.66133815e-16 -6.66133815e-16 -8.88178420e-16  4.44089210e-16]
@@ -454,6 +494,16 @@ void Arena::saveScreen(const cv::Mat4b& screen)
 
         cv::imwrite(fname.str(), screen);
     }
+}
+
+void Arena::setMaxNumTurns(int value)
+{
+    myMaxNumTurns = value;
+}
+
+void Arena::setAgentStarts(bool value)
+{
+    myAgentStarts = value;
 }
 
 void Arena::setSaveScreens(bool value)
