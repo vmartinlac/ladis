@@ -38,7 +38,9 @@ void generateEnvironmentSamples()
     while(true)
     {
         const int opponent_skill = 0;
+        //const bool agent_starts = true;
         const bool agent_starts( (*rng)() % 2 );
+        //const int agent_index = 1;
         const int agent_index = (*rng)() % agents.size();
 
         arena.setAgentStarts(agent_starts);
@@ -65,8 +67,6 @@ void generateEnvironmentSamples()
             result = "illegal_opponent_move";
             break;
         case Arena::OUTCOME_ERROR:
-            result = "error";
-            break;
         default:
             throw std::runtime_error("internal error");
         }
@@ -88,7 +88,7 @@ void generateEnvironmentSamples()
                 const int r0 = stat(metadata_fname.c_str(), &stats);
                 const int r1 = stat(log_fname.c_str(), &stats);
 
-                go_on = bool(r0) || bool(r1);
+                go_on = !( bool(r0) || bool(r1) );
             }
 
             std::ofstream f(metadata_fname.c_str());

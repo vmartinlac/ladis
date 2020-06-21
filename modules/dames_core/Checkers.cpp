@@ -1,6 +1,11 @@
 #include <cmath>
 #include "Checkers.h"
 
+bool Checkers::State::operator!=(const State& other) const
+{
+    return !( operator==(other) );
+}
+
 bool Checkers::State::operator==(const State& other) const
 {
     bool ret = false;
@@ -165,13 +170,18 @@ bool Checkers::State::isMyTurn() const
     return myIsMyTurn;
 }
 
+bool Checkers::Action::operator!=(const Action& other) const
+{
+    return !(operator==(other));
+}
+
 bool Checkers::Action::operator==(const Action& other) const
 {
     bool ret = false;
 
     if(other.myNumMoves == myNumMoves)
     {
-        ret = std::equal(myTrajectory, myTrajectory+myNumMoves, other.myTrajectory);
+        ret = std::equal(myTrajectory, myTrajectory+myNumMoves+1, other.myTrajectory);
     }
 
     return ret;
@@ -842,5 +852,11 @@ float Checkers::UtilityFunction::getValue(const State& state) const
     */
 
     return ret;
+}
+
+int Checkers::flatIndexToGridIndex(int i)
+{
+    const int zigzag = 1 - (i/(SIDE/2)) % 2;
+    return zigzag + SIDE*(i/(SIDE/2)) + (i % (SIDE/2))*2;
 }
 

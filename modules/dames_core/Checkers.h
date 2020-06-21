@@ -17,6 +17,8 @@ public:
     static constexpr int SIDE = 10;
     static constexpr int N = (SIDE*SIDE)/2;
 
+    static int flatIndexToGridIndex(int i);
+
     class State
     {
     protected:
@@ -44,6 +46,7 @@ public:
         bool isMyTurn() const;
         void invert();
         bool operator==(const State& other) const;
+        bool operator!=(const State& other) const;
     };
 
     class UtilityFunction
@@ -92,6 +95,7 @@ public:
         std::string getText() const;
         void makeDebugEdgeSpec(std::ostream& s, const std::string& node0, const std::string& node1) const;
         bool operator==(const Action& other) const;
+        bool operator!=(const Action& other) const;
     };
 
     class ActionIterator
@@ -143,7 +147,7 @@ public:
 
     using Solver = Minimax<State, UtilityFunction, Action, ActionIterator>;
 
-protected:
+public:
 
     enum Neighbor
     {
@@ -153,7 +157,7 @@ protected:
         NEIGHBOR_TOP_LEFT=3,
     };
 
-protected:
+public:
 
     static int getReachable(int from, int index);
 };

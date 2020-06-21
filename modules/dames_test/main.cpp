@@ -11,9 +11,76 @@ class DamesTest : public QObject
 
 private slots:
 
+    void testEqualityOperators()
+    {
+        int tmp[Checkers::N];
+
+        tmp[0] = 0;
+        tmp[1] = 1;
+        Checkers::Action a0;
+        a0.set(1, tmp);
+
+        tmp[0] = 1;
+        tmp[1] = 2;
+        Checkers::Action a1;
+        a1.set(1, tmp);
+
+        QVERIFY(a0 == a0);
+        QVERIFY(! (a0 != a0) );
+
+        QVERIFY(a0 != a1);
+        QVERIFY(! (a0 == a1) );
+    }
+
+    void testIndices()
+    {
+        QVERIFY( Checkers::flatIndexToGridIndex(0) == 1);
+        QVERIFY( Checkers::flatIndexToGridIndex(4) == 9);
+        QVERIFY( Checkers::flatIndexToGridIndex(6) == 12);
+        QVERIFY( Checkers::flatIndexToGridIndex(13) == 27);
+
+        QVERIFY( Checkers::getReachable(6, Checkers::NEIGHBOR_TOP_RIGHT) == 10 );
+        QVERIFY( Checkers::getReachable(6, Checkers::NEIGHBOR_BOTTOM_RIGHT) == 0 );
+        QVERIFY( Checkers::getReachable(6, Checkers::NEIGHBOR_TOP_LEFT) == 11 );
+        QVERIFY( Checkers::getReachable(6, Checkers::NEIGHBOR_BOTTOM_LEFT) == 1 );
+    }
+
+    /*
+    void testTmp()
+    {
+        const char* grid =
+            " o o o o o\n"
+            "o o o o o \n"
+            " o . . o o\n"
+            "o o . . . \n"
+            " . . . . .\n"
+            "o . . . . \n"
+            " . . p . o\n"
+            "p p . . p \n"
+            " p . . p p\n"
+            "p p p p p \n";
+
+        Checkers::State s;
+        s.setSquareGrid(grid);
+        s.setMyTurn(true);
+
+        Checkers::ActionIterator it;
+        it.init(s);
+
+        Checkers::Action a_;
+        Checkers::State s_;
+        while(it.next(s, a_, s_))
+        {
+            std::cout << a_.getTrajectory(0) << " -> " << a_.getTrajectory(1) << std::endl;
+            std::cout << s_.getSquareGrid() << std::endl;
+            std::cout << std::endl;
+        }
+    }
+    */
+
     void testSerialize()
     {
-        const std::string filename = "sequence.json";
+        const std::string filename = "sequence.txt";
         std::vector<Checkers::State> sequence0;
         std::vector<Checkers::State> sequence1;
 
@@ -145,7 +212,7 @@ private slots:
 
             if(ok)
             {
-                std::cout << newstate.getSquareGrid() << std::endl;
+                //std::cout << newstate.getSquareGrid() << std::endl;
 
                 QVERIFY(action.getNumMoves()+1 == pt.move.size());
 

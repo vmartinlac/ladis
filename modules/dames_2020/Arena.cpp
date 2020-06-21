@@ -41,10 +41,10 @@ void Arena::start()
 {
     LADIS::Emulator& interface = LADIS::Emulator::getInstance();
 
-    interface.start(true);
+    interface.start(false);
 
     // let dosbox initialize.
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
     // launch DAME2020 game.
     typeText("CD DAME2020\nDA2020\n");
@@ -172,9 +172,8 @@ void Arena::play(Agent* agent)
     Checkers::ActionIterator action_iterator;
     Checkers::State current_state;
     int num_consecutive_outcomes = 0;
+    int num_turns = 0;
     bool go_on = true;
-    bool has_forecast = false;
-    std::vector<ActionStatePair> action_state_list;
 
     myOutcome = OUTCOME_ERROR;
     myLog.clear();
@@ -205,11 +204,11 @@ void Arena::play(Agent* agent)
             " o o o o o\n"
             "o o o o o \n"
             " o o o o o\n"
-            "P o o o o \n"
+            "o o o o o \n"
             " . . . . .\n"
             ". . . . . \n"
             " p p p p p\n"
-            "p O p p p \n"
+            "p p p p p \n"
             " p p p p p\n"
             "p p p p p \n");
         s.setMyTurn(false);
@@ -219,138 +218,185 @@ void Arena::play(Agent* agent)
 
     while(go_on)
     {
+        //std::cout << "* Getting current screen..." << std::endl;
         interface.getCurrentImage(screen);
 
         if(tryExtractOutcome(screen))
         {
+            std::cout << "* Screen contains outcome!" << std::endl;
             num_consecutive_outcomes++;
             go_on = (num_consecutive_outcomes <= 2);
         }
         else
         {
+            //std::cout << "* Screen does not contains outcome!" << std::endl;
+
             num_consecutive_outcomes = 0;
 
+            //std::cout << "* Reading state..." << std::endl;
             readState(screen, current_state);
 
-            if( current_state.isMyTurn() )
+            if( current_state.isMyTurn() && (myLog.empty() || !(myLog.back() == current_state)) )
             {
-                if(has_forecast)
-                {
-                    auto pred = [&current_state] (const ActionStatePair& item)
-                    {
-                        return (current_state == item.state);
-                    };
+                std::cout << "* I have to play!" << std::endl;
 
-                    const bool found = ( action_state_list.end() != std::find_if(action_state_list.begin(), action_state_list.end(), pred) );
+                std::cout << "* Incoming state:" << std::endl;
+                std::cout << current_state.getSquareGrid() << std::endl;
+                std::cout << std::endl;
+
+                if(!myLog.empty())
+                {
+                    std::cout << "* Checking if last move was legal..." << std::endl;
+
+                    if(myLog.back().isMyTurn())
+                    {
+                        throw std::runtime_error("internal error");
+                    }
+
+                    /*
+                    std::cout << "STATE FROM:" << std::endl;
+                    std::cout << myLog.back().getSquareGrid() << std::endl;
+                    std::cout << std::endl;
+                    std::cout << "STATE TO:" << std::endl;
+                    std::cout << current_state.getSquareGrid() << std::endl;
+                    std::cout << std::endl;
+                    */
+
+                    bool found = false;
+
+                    {
+                        action_iterator.init(myLog.back());
+
+                        Checkers::Action action_;
+                        Checkers::State state_;
+                        while(!found && action_iterator.next(myLog.back(), action_, state_))
+                        {
+                            found = (current_state == state_);
+                            /*
+                            std::cout << "LEGAL:" << std::endl;
+                            std::cout << state_.getSquareGrid() << std::endl;
+                            std::cout << std::endl;
+                            */
+                        }
+                    }
 
                     if(found)
                     {
-                        std::cout << "Current state was forecast!" << std::endl;
+                        std::cout << "* Last move was legal!" << std::endl;
                     }
                     else
                     {
-                        std::cout << "CURRENT STATE WAS NOT FORECAST!" << std::endl;
+                        std::cout << "* Last move was not legal!" << std::endl;
+                        go_on = false;
+                        myOutcome = OUTCOME_ILLEGAL_OPPONENT_MOVE;
                     }
-
-                    has_forecast = false;
-                    action_state_list.clear();
                 }
 
-                // Print some info to the user.
-                std::cout << "My turn!" << std::endl;
-                std::cout << current_state.getSquareGrid() << std::endl;
-
-                // save current screen.
-                saveScreen(screen);
-
-                action_state_list.clear();
-
-                // Enumerate available actions.
+                if(go_on)
                 {
-                    action_iterator.init(current_state);
+                    myLog.push_back(current_state);
 
-                    Checkers::Action action_;
-                    Checkers::State state_;
-                    while(action_iterator.next(current_state, action_, state_))
-                    {
-                        action_state_list.emplace_back();
-                        action_state_list.back().action = action_;
-                        action_state_list.back().state = state_;
-                    }
+                    // save current screen.
+                    saveScreen(screen);
 
-                    std::cout << "Number of available actions: " << action_state_list.size() << std::endl;
-                }
+                    std::cout << "* Asking action from agent..." << std::endl;
 
-                if(action_state_list.empty())
-                {
-                    std::cout << "I have lost!" << std::endl;
-                    myOutcome = OUTCOME_LOSE;
-                    go_on = false;
-                }
-                else
-                {
-                    Checkers::Action action;
-                    Checkers::State resulting_state;
-
-                    const bool ok = agent->getAction(current_state, action);
+                    Checkers::Action requested_action;
+                    const bool ok = agent->getAction(current_state, requested_action);
 
                     if(ok)
                     {
-                        auto pred = [&action] (const ActionStatePair& item)
+                        bool found = false;
+                        Checkers::State resulting_state;
+
+                        std::cout << "* Checking legality of move given by agent..." << std::endl;
+
+                        // Enumerate available actions.
                         {
-                            return item.action == action;
-                        };
-
-                        std::vector<ActionStatePair>::iterator it = std::find_if(action_state_list.begin(), action_state_list.end(), pred);
-
-                        if(it == action_state_list.end())
-                        {
-                            std::cout << "Illegal move from agent!" << std::endl;
-                            myOutcome = OUTCOME_ILLEGAL_AGENT_MOVE;
-                            go_on = false;
-                        }
-                        else
-                        {
-                            const Checkers::State resulting_state = it->state;
-
-                            action_iterator.init(resulting_state);
-
-                            action_state_list.clear();
+                            action_iterator.init(current_state);
 
                             Checkers::Action action_;
                             Checkers::State state_;
-                            while(action_iterator.next(resulting_state, action_, state_))
+                            while(!found && action_iterator.next(current_state, action_, state_))
                             {
-                                action_state_list.emplace_back();
-                                action_state_list.back().action = action_;
-                                action_state_list.back().state = state_;
+                                if(requested_action == action_)
+                                {
+                                    resulting_state = state_;
+                                    found = true;
+                                }
+                            }
+                        }
+
+                        if(found)
+                        {
+                            if(resulting_state.isMyTurn())
+                            {
+                                throw std::runtime_error("internal error");
                             }
 
-                            has_forecast = true;
-                        }
+                            std::cout << "* Move is legal." << std::endl;
 
-                        std::cout << "Move:";
-                        std::stringstream ss;
-                        for(int i=0; i<=action.getNumMoves(); i++)
+                            myLog.push_back(resulting_state);
+
+                            /*
+                            std::cout << "FROM:" << std::endl;
+                            std::cout << current_state.getSquareGrid() << std::endl;
+                            std::cout << std::endl;
+                            std::cout << "TO:" << std::endl;
+                            std::cout << resulting_state.getSquareGrid() << std::endl;
+                            std::cout << std::endl;
+                            */
+
+                            std::cout << "* Move:";
+                            std::stringstream ss;
+                            for(int i=0; i<=requested_action.getNumMoves(); i++)
+                            {
+                                //const int cell = requested_action.getTrajectory(i) + 1;
+                                const int cell = (myAgentStarts) ? (Checkers::N-requested_action.getTrajectory(i)) : (requested_action.getTrajectory(i) + 1);
+                                ss << cell << '\n';
+                                std::cout << ' ' << cell;
+                            }
+                            std::cout << std::endl;
+
+                            std::cout << "Outcoming state:" << std::endl;
+                            std::cout << resulting_state.getSquareGrid() << std::endl;
+                            std::cout << std::endl;
+
+                            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                            typeText(ss.str().c_str());
+                            std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+                        }
+                        else
                         {
-                            const int cell = (myAgentStarts) ? (Checkers::N-action.getTrajectory(i)) : (action.getTrajectory(i) + 1);
-                            ss << cell << '\n';
-                            std::cout << ' ' << cell;
+                            std::cout << "* Illegal move from agent!" << std::endl;
+                            myOutcome = OUTCOME_ILLEGAL_AGENT_MOVE;
+                            go_on = false;
                         }
-                        std::cout << std::endl;
-
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                        typeText(ss.str().c_str());
-                        std::this_thread::sleep_for(std::chrono::milliseconds(4000));
                     }
                     else
                     {
-                        std::cout << "I have lost!" << std::endl;
+                        std::cout << "* Agent lost!" << std::endl;
                         myOutcome = OUTCOME_LOSE;
                         go_on = false;
                     }
                 }
+
+                if(go_on)
+                {
+                    num_turns++;
+                    if(num_turns >= myMaxNumTurns)
+                    {
+                        myOutcome = OUTCOME_DRAW;
+                        go_on = false;
+                    }
+                }
             }
+            /*
+            else
+            {
+                std::cout << "* I do not have to play!" << std::endl;
+            }
+            */
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -360,12 +406,10 @@ void Arena::play(Agent* agent)
     interface.getCurrentImage(screen);
     saveScreen(screen);
 
-    interface.keyDown(LADIS_KEY_F10);
-    interface.keyUp(LADIS_KEY_F10);
-    interface.keyDown(LADIS_KEY_ESCAPE);
-    interface.keyUp(LADIS_KEY_ESCAPE);
+    pressKey(LADIS_KEY_F10);
+    pressKey(LADIS_KEY_ESCAPE);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void Arena::readState(const cv::Mat4b& screen, Checkers::State& s)
