@@ -7,13 +7,6 @@
 #include "Arena.h"
 #include "Checkers.h"
 
-/*
-TODO
-+ exit when maximum number of turns is reached.
-+ investigate why some opponent's moves were not predicted.
-+ fill log state sequence.
-*/
-
 std::unique_ptr<Arena> Arena::myInstance;
 
 const std::vector<Checkers::State>& Arena::refLog() const
@@ -65,7 +58,6 @@ Arena::Arena()
     myMaxNumTurns = 200;
     myOpponentSkill = 0;
     mySaveScreens = true;
-    myScreenshotCount = 0;
     myOutcome = OUTCOME_ERROR;
 
     // initialize table of character to key code.
@@ -126,7 +118,7 @@ void Arena::typeText(const char* text)
     {
         if( myCharToKey.find(*p) == myCharToKey.end() )
         {
-            std::cout << "Character not found!" << std::endl;
+            throw std::runtime_error("Character not found!");
         }
 
         const int key = std::get<0>(myCharToKey[*p]);
@@ -159,7 +151,7 @@ void Arena::typeText(const char* text)
     }
 }
 
-void Arena::play(Agent* agent)
+void Arena::play(Agent* agent, Hook* hook)
 {
     struct ActionStatePair
     {
@@ -218,49 +210,43 @@ void Arena::play(Agent* agent)
 
     while(go_on)
     {
-        //std::cout << "* Getting current screen..." << std::endl;
+        //if(hook) hook->getLogStream() << "* Getting current screen..." << std::endl;
         interface.getCurrentImage(screen);
 
         if(tryExtractOutcome(screen))
         {
-            std::cout << "* Screen contains outcome!" << std::endl;
+            if(hook) hook->getLogStream() << "* Screen contains outcome!" << std::endl;
             num_consecutive_outcomes++;
             go_on = (num_consecutive_outcomes <= 2);
         }
         else
         {
-            //std::cout << "* Screen does not contains outcome!" << std::endl;
+            //if(hook) hook->getLogStream() << "* Screen does not contains outcome!" << std::endl;
 
             num_consecutive_outcomes = 0;
 
-            //std::cout << "* Reading state..." << std::endl;
+            //if(hook) hook->getLogStream() << "* Reading state..." << std::endl;
             readState(screen, current_state);
 
             if( current_state.isMyTurn() && (myLog.empty() || !(myLog.back() == current_state)) )
             {
-                std::cout << "* I have to play!" << std::endl;
-
-                std::cout << "* Incoming state:" << std::endl;
-                std::cout << current_state.getSquareGrid() << std::endl;
-                std::cout << std::endl;
+                if(hook)
+                {
+                    hook->getLogStream()
+                        << "* I have to play!" << std::endl
+                        << "* Incoming state:" << std::endl
+                        << current_state.getSquareGrid() << std::endl
+                        << std::endl;
+                }
 
                 if(!myLog.empty())
                 {
-                    std::cout << "* Checking if last move was legal..." << std::endl;
+                    if(hook) hook->getLogStream() << "* Checking if last move was legal..." << std::endl;
 
                     if(myLog.back().isMyTurn())
                     {
                         throw std::runtime_error("internal error");
                     }
-
-                    /*
-                    std::cout << "STATE FROM:" << std::endl;
-                    std::cout << myLog.back().getSquareGrid() << std::endl;
-                    std::cout << std::endl;
-                    std::cout << "STATE TO:" << std::endl;
-                    std::cout << current_state.getSquareGrid() << std::endl;
-                    std::cout << std::endl;
-                    */
 
                     bool found = false;
 
@@ -272,21 +258,16 @@ void Arena::play(Agent* agent)
                         while(!found && action_iterator.next(myLog.back(), action_, state_))
                         {
                             found = (current_state == state_);
-                            /*
-                            std::cout << "LEGAL:" << std::endl;
-                            std::cout << state_.getSquareGrid() << std::endl;
-                            std::cout << std::endl;
-                            */
                         }
                     }
 
                     if(found)
                     {
-                        std::cout << "* Last move was legal!" << std::endl;
+                        if(hook) hook->getLogStream() << "* Last move was legal!" << std::endl;
                     }
                     else
                     {
-                        std::cout << "* Last move was not legal!" << std::endl;
+                        if(hook) hook->getLogStream() << "* Last move was not legal!" << std::endl;
                         go_on = false;
                         myOutcome = OUTCOME_ILLEGAL_OPPONENT_MOVE;
                     }
@@ -297,9 +278,11 @@ void Arena::play(Agent* agent)
                     myLog.push_back(current_state);
 
                     // save current screen.
-                    saveScreen(screen);
-
-                    std::cout << "* Asking action from agent..." << std::endl;
+                    if(hook)
+                    {
+                        hook->receivedImage(screen);
+                        hook->getLogStream() << "* Asking action from agent..." << std::endl;
+                    }
 
                     Checkers::Action requested_action;
                     const bool ok = agent->getAction(current_state, requested_action);
@@ -309,7 +292,7 @@ void Arena::play(Agent* agent)
                         bool found = false;
                         Checkers::State resulting_state;
 
-                        std::cout << "* Checking legality of move given by agent..." << std::endl;
+                        if(hook) hook->getLogStream() << "* Checking legality of move given by agent..." << std::endl;
 
                         // Enumerate available actions.
                         {
@@ -334,33 +317,28 @@ void Arena::play(Agent* agent)
                                 throw std::runtime_error("internal error");
                             }
 
-                            std::cout << "* Move is legal." << std::endl;
+                            if(hook) hook->getLogStream() << "* Move is legal." << std::endl;
 
                             myLog.push_back(resulting_state);
 
-                            /*
-                            std::cout << "FROM:" << std::endl;
-                            std::cout << current_state.getSquareGrid() << std::endl;
-                            std::cout << std::endl;
-                            std::cout << "TO:" << std::endl;
-                            std::cout << resulting_state.getSquareGrid() << std::endl;
-                            std::cout << std::endl;
-                            */
-
-                            std::cout << "* Move:";
+                            if(hook) hook->getLogStream() << "* Move:";
                             std::stringstream ss;
                             for(int i=0; i<=requested_action.getNumMoves(); i++)
                             {
                                 //const int cell = requested_action.getTrajectory(i) + 1;
                                 const int cell = (myAgentStarts) ? (Checkers::N-requested_action.getTrajectory(i)) : (requested_action.getTrajectory(i) + 1);
                                 ss << cell << '\n';
-                                std::cout << ' ' << cell;
+                                if(hook) hook->getLogStream() << ' ' << cell;
                             }
-                            std::cout << std::endl;
+                            if(hook) hook->getLogStream() << std::endl;
 
-                            std::cout << "Outcoming state:" << std::endl;
-                            std::cout << resulting_state.getSquareGrid() << std::endl;
-                            std::cout << std::endl;
+                            if(hook)
+                            {
+                                hook->getLogStream()
+                                    << "Outcoming state:" << std::endl
+                                    << resulting_state.getSquareGrid() << std::endl
+                                    << std::endl;
+                            }
 
                             std::this_thread::sleep_for(std::chrono::milliseconds(500));
                             typeText(ss.str().c_str());
@@ -368,14 +346,14 @@ void Arena::play(Agent* agent)
                         }
                         else
                         {
-                            std::cout << "* Illegal move from agent!" << std::endl;
+                            if(hook) hook->getLogStream() << "* Illegal move from agent!" << std::endl;
                             myOutcome = OUTCOME_ILLEGAL_AGENT_MOVE;
                             go_on = false;
                         }
                     }
                     else
                     {
-                        std::cout << "* Agent lost!" << std::endl;
+                        if(hook) hook->getLogStream() << "* Agent lost!" << std::endl;
                         myOutcome = OUTCOME_LOSE;
                         go_on = false;
                     }
@@ -394,7 +372,7 @@ void Arena::play(Agent* agent)
             /*
             else
             {
-                std::cout << "* I do not have to play!" << std::endl;
+                if(hook) hook->getLogStream() << "* I do not have to play!" << std::endl;
             }
             */
         }
@@ -404,7 +382,7 @@ void Arena::play(Agent* agent)
 
     // Save last screen.
     interface.getCurrentImage(screen);
-    saveScreen(screen);
+    if(hook) hook->receivedImage(screen);
 
     pressKey(LADIS_KEY_F10);
     pressKey(LADIS_KEY_ESCAPE);
@@ -526,18 +504,6 @@ char Arena::predictCell(const cv::Vec6f& features)
     }
 
     return values[k];
-}
-
-void Arena::saveScreen(const cv::Mat4b& screen)
-{
-    if(mySaveScreens)
-    {
-        std::stringstream fname;
-        fname << "screen_" << myScreenshotCount << ".png";
-        myScreenshotCount++;
-
-        cv::imwrite(fname.str(), screen);
-    }
 }
 
 void Arena::setMaxNumTurns(int value)

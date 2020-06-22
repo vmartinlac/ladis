@@ -5,11 +5,55 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <opencv2/imgcodecs.hpp>
 #include "Arena.h"
 #include "MinimaxAgent.h"
 #include "UniformAgent.h"
 #include "StateSequence.h"
 #include "EpsilonGreedyAgent.h"
+
+class MyHook : public Arena::Hook
+{
+public:
+
+    void initialize(const std::string& dirname)
+    {
+        myDirectory = std::move(dirname);
+        myNextImage = 0;
+
+        std::string log_path = dirname + "/debug.txt";
+        myLog.open(log_path.c_str());
+        if( !myLog.is_open() )
+        {
+            throw std::runtime_error("could not open log file");
+        }
+    }
+
+    void finalize()
+    {
+        myLog.close();
+    }
+
+    std::ostream& getLogStream() override
+    {
+        //return std::cout;
+        return myLog;
+    }
+
+    void receivedImage(const cv::Mat4b& screen) override
+    {
+        const std::string path = myDirectory + "/screen_" + std::to_string(myNextImage) + ".png";
+        myNextImage++;
+
+        cv::imwrite(path.c_str(), screen);
+    }
+
+protected:
+
+    std::string myDirectory;
+    int myNextImage;
+    std::ofstream myLog;
+};
 
 void generateEnvironmentSamples()
 {
@@ -19,9 +63,12 @@ void generateEnvironmentSamples()
 
     arena.start();
 
+    MyHook hook;
+
     MinimaxAgent agent0;
     agent0.setMaxDepth(5);
 
+    /*
     UniformAgent agent1;
     agent1.setRNG(rng);
 
@@ -30,22 +77,55 @@ void generateEnvironmentSamples()
     agent2.setGreedyAgent(&agent0);
     agent2.setRandomAgent(&agent1);
     agent2.setRNG(rng);
+    */
 
-    std::vector<Agent*> agents{&agent0, &agent1, &agent2};
+    std::vector<Agent*> agents{&agent0};
 
     int file_count = 0;
 
     while(true)
     {
-        const int opponent_skill = 0;
-        //const bool agent_starts = true;
+        std::string dirname;
+
+        {
+            bool go_on = true;
+            while(go_on)
+            {
+                struct stat unused;
+                dirname = "result_" + std::to_string(file_count);
+                file_count++;
+                const int ret = stat(dirname.c_str(), &unused);
+                
+                if(ret < 0)
+                {
+                    if(errno == ENOENT)
+                    {
+                        go_on = false;
+                    }
+                    else
+                    {
+                        throw std::runtime_error("could not access filesystem");
+                    }
+                }
+            }
+
+            if(mkdir(dirname.c_str(), S_IRWXU | S_IXOTH | S_IROTH | S_IRGRP | S_IXGRP) < 0)
+            {
+                throw std::runtime_error("Could not create result directory!");
+            }
+        }
+
+        const int opponent_skill = 2;
         const bool agent_starts( (*rng)() % 2 );
-        //const int agent_index = 1;
         const int agent_index = (*rng)() % agents.size();
+
+        hook.initialize(dirname);
 
         arena.setAgentStarts(agent_starts);
         arena.setOpponentSkill(opponent_skill);
-        arena.play(agents[agent_index]);
+        arena.play(agents[agent_index], &hook);
+
+        hook.finalize();
 
         std::string result;
 
@@ -74,22 +154,8 @@ void generateEnvironmentSamples()
         std::cout << "GAME ENDED: " << result << std::endl;
 
         {
-            std::string metadata_fname;
-            std::string log_fname;
-
-            bool go_on = true;
-            while(go_on)
-            {
-                metadata_fname = "metadata_" + std::to_string(file_count) + ".txt";
-                log_fname = "log_" + std::to_string(file_count) + ".txt";
-                file_count++;
-
-                struct stat stats;
-                const int r0 = stat(metadata_fname.c_str(), &stats);
-                const int r1 = stat(log_fname.c_str(), &stats);
-
-                go_on = !( bool(r0) || bool(r1) );
-            }
+            const std::string metadata_fname = dirname + "/metadata.txt";
+            const std::string log_fname = dirname + "/log.txt";
 
             std::ofstream f(metadata_fname.c_str());
             f << opponent_skill << std::endl;

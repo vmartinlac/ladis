@@ -9,6 +9,14 @@ class Arena
 {
 public:
 
+    class Hook
+    {
+    public:
+
+        virtual void receivedImage(const cv::Mat4b& screen) = 0;
+        virtual std::ostream& getLogStream() = 0;
+    };
+
     enum Outcome
     {
         OUTCOME_WIN,
@@ -29,7 +37,7 @@ public:
     void setOpponentSkill(int skill);
     void setAgentStarts(bool value);
 
-    void play(Agent* agent);
+    void play(Agent* agent, Hook* hook=nullptr);
 
     const std::vector<Checkers::State>& refLog() const;
 
@@ -53,7 +61,6 @@ protected:
 
     static std::unique_ptr<Arena> myInstance;
     std::map<char, std::tuple<int,bool> > myCharToKey;
-    int myScreenshotCount;
     int myOpponentSkill;
     Outcome myOutcome;
     bool mySaveScreens;
