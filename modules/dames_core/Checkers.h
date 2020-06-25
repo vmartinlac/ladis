@@ -47,6 +47,7 @@ public:
         void invert();
         bool operator==(const State& other) const;
         bool operator!=(const State& other) const;
+        bool operator<(const State& other) const;
     };
 
     class UtilityFunction
@@ -96,6 +97,7 @@ public:
         void makeDebugEdgeSpec(std::ostream& s, const std::string& node0, const std::string& node1) const;
         bool operator==(const Action& other) const;
         bool operator!=(const Action& other) const;
+        bool operator<(const Action& other) const;
     };
 
     class ActionIterator

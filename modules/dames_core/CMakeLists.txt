@@ -27,7 +27,7 @@ add_library(
     Agent.h
     Agent.cpp)
 
-target_link_libraries(LADIS_dames_core PUBLIC opencv_imgcodecs opencv_imgproc Qt5::Core)
+target_link_libraries(LADIS_dames_core PUBLIC opencv_imgcodecs opencv_imgproc Qt5::Core torch)
 
 target_include_directories(LADIS_dames_core INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 

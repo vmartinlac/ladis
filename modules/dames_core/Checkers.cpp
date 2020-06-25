@@ -187,6 +187,35 @@ bool Checkers::Action::operator==(const Action& other) const
     return ret;
 }
 
+bool Checkers::Action::operator<(const Action& other) const
+{
+    return std::lexicographical_compare(
+        myTrajectory,
+        myTrajectory+myNumMoves,
+        other.myTrajectory,
+        other.myTrajectory+myNumMoves);
+}
+
+bool Checkers::State::operator<(const State& other) const
+{
+    bool ret = false;
+
+    if(myIsMyTurn && !other.myIsMyTurn)
+    {
+        ret = true;
+    }
+    else if(myIsMyTurn == other.myIsMyTurn)
+    {
+        ret = std::lexicographical_compare(
+            myGrid,
+            myGrid+N,
+            other.myGrid,
+            other.myGrid+N);
+    }
+
+    return ret;
+}
+
 std::string Checkers::Action::getText() const
 {
     std::stringstream s;
@@ -351,7 +380,6 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
     }
 
     int count = 0;
-    char piece = 0;
     int k = index;
     int last_k = index;
     while(k >= 0)
@@ -361,7 +389,6 @@ void Checkers::ActionIterator::addActionFromStack(std::vector<Move>& stack, int 
             grid[stack[k].captured_cell] = '.';
         }
         trajectory[count] = stack[k].landing_cell;
-        piece = stack[k].landing_cell;
 
         last_k = k;
         count++;
