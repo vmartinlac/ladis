@@ -10,7 +10,8 @@ bool ActionDataset::load(const QString& path)
 
     parseRootDirectory(path, seen);
 
-    myExamples.clear();
+    myStatesFrom.clear();
+    myStatesTo.clear();
 
     {
         bool has_current_state_from = false;
@@ -54,6 +55,11 @@ bool ActionDataset::load(const QString& path)
 
             if(dump)
             {
+                myStatesFrom.emplace_back();
+                myStatesFrom.back().state = current_state_from;
+                myStatesFrom.back().offset = myStatesTo.size();
+                myStatesFrom.back().count = 0;
+
                 std::map<Checkers::State,int>::iterator it2;
 
                 int count = 0;
@@ -70,10 +76,11 @@ bool ActionDataset::load(const QString& path)
                 it2 = current_states_to.begin();
                 while(it2 != current_states_to.end())
                 {
-                    myExamples.emplace_back();
-                    myExamples.back().state_from = current_state_from;
-                    myExamples.back().state_to = it2->first;
-                    myExamples.back().probability = float(it2->second) / float(count);
+                    myStatesTo.emplace_back();
+                    myStatesTo.back().state = it2->first;
+                    myStatesTo.back().probability = float(it2->second) / float(count);
+
+                    myStatesFrom.back().count++;
                     it2++;
                 }
             }
@@ -124,24 +131,29 @@ bool ActionDataset::load(const QString& path)
     }
     */
 
-    std::cout << "Loaded " << myExamples.size() << " samples." << std::endl;
+    std::cout << "Loaded " << getNumExamples() << " samples." << std::endl;
 
     return true;
 }
 
-ActionDataset::ExampleType ActionDataset::get(size_t index)
+void ActionDataset::getExample(size_t index, Checkers::State& state_from, std::vector<Checkers::State>& state_to, std::vector<float>& transition_probability) const
 {
-    at::Tensor t0;
-    at::Tensor t1;
+    state_from = myStatesFrom[index].state;
 
-    // TODO: set t0 and t1.
+    state_to.clear();
+    transition_probability.clear();
 
-    return ExampleType(t0, t1);
+    for(int i=0; i<myStatesFrom[index].count; i++)
+    {
+        const int offset = myStatesFrom[index].offset + i;
+        state_to.push_back( myStatesTo[offset].state );
+        transition_probability.push_back( myStatesTo[offset].probability );
+    }
 }
 
-c10::optional<size_t> ActionDataset::size() const
+size_t ActionDataset::getNumExamples() const
 {
-    return myExamples.size();
+    return myStatesFrom.size();
 }
 
 void ActionDataset::parseRootDirectory(const QString& path, std::multimap<Checkers::State, Checkers::State>& seen)

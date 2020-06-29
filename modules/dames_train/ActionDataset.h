@@ -3,26 +3,31 @@
 
 #include <map>
 #include <vector>
-#include <torch/torch.h>
 #include <Checkers.h>
 #include <QString>
 
-class ActionDataset : public torch::data::datasets::Dataset<ActionDataset>
+class ActionDataset
 {
 protected:
 
-    struct Example
+    struct StateFrom
     {
-        Checkers::State state_from;
-        Checkers::State state_to;
+        Checkers::State state;
+        int offset;
+        int count;
+    };
+
+    struct StateTo
+    {
+        Checkers::State state;
         float probability;
     };
 
 public:
 
     bool load(const QString& path);
-    ExampleType get(size_t index) override;
-    c10::optional<size_t> size() const override;
+    void getExample(size_t index, Checkers::State& state_from, std::vector<Checkers::State>& state_to, std::vector<float>& transition_probability) const;
+    size_t getNumExamples() const;
 
 protected:
 
@@ -32,5 +37,6 @@ protected:
 
 protected:
 
-    std::vector<Example> myExamples;
+    std::vector<StateFrom> myStatesFrom;
+    std::vector<StateTo> myStatesTo;
 };
