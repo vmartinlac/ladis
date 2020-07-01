@@ -18,6 +18,7 @@ public:
     static constexpr int N = (SIDE*SIDE)/2;
 
     static int flatIndexToGridIndex(int i);
+    static int gridIndexToFlatIndex(int i);
 
     class State
     {

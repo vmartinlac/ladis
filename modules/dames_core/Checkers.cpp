@@ -881,6 +881,11 @@ float Checkers::UtilityFunction::getValue(const State& state) const
     return ret;
 }
 
+int Checkers::gridIndexToFlatIndex(int i)
+{
+    throw std::runtime_error("not implemented!");
+}
+
 int Checkers::flatIndexToGridIndex(int i)
 {
     const int zigzag = 1 - (i/(SIDE/2)) % 2;

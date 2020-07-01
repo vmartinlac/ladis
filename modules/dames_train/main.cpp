@@ -10,50 +10,97 @@ public:
 
     ActionNetwork()
     {
-        //myWeight = register_parameter("w", torch::randn({10, 10}));
+        const int out_features_1 = 100;
+        myWeights1 = register_parameter("w1", torch::randn({out_features_1, 50*5*2}));
+        myBiais1 = register_parameter("b1", torch::randn({out_features_1}));
+
+        const int out_features_2 = 1;
+        myWeights2 = register_parameter("w2", torch::randn({out_features_2, out_features_1}));
+        myBiais2 = register_parameter("b2", torch::randn({out_features_2}));
     }
 
     torch::Tensor forward(const Checkers::State& state_from, const std::vector<Checkers::State>& states_to)
     {
-        /*
-        torch::Tensor tensor_from = makeInputFeatures(state_from);
-        torch::Tensor tensor_to = makeInputFeatures(state_to);
+        myTemp0.clear();
+        myTemp1.clear();
 
-        return forward(tensor_from, tensor_to);
-        */
+        myTemp0.resize(2);
+        myTemp1.resize(states_to.size());
 
-        const size_t C = states_to.size();
+        myTemp0[0] = makeInputFeatures(state_from);
 
-        torch::Tensor tmp = torch::full({1, C}, 0.0);
-        return torch::nn::functional::log_softmax(tmp, 1);
+        for(size_t i=0; i<states_to.size(); i++)
+        {
+            myTemp0[1] = makeInputFeatures(states_to[i]);
+            myTemp1[i] = torch::unsqueeze(torch::cat(myTemp0, 0), 0);
+        }
+
+        torch::Tensor L0 = torch::cat(myTemp1, 0); // (num_states, 500)
+        torch::Tensor L1 = torch::nn::functional::linear(L0, myWeights1, myBiais1); // (num_states, out_features_1)
+        torch::Tensor L2 = torch::nn::functional::relu(L1); // (num_states, out_features_1)
+        torch::Tensor L3 = torch::nn::functional::linear(L2, myWeights2, myBiais2); // (num_states, out_features_2) == (num_states, 1)
+        torch::Tensor L4 = torch::nn::functional::log_softmax(L3, 0); // (num_states, 1)
+
+        myTemp0.clear();
+        myTemp1.clear();
+
+        return L4;
     }
 
     torch::Tensor makeTransitionProbabilityTable(const std::vector<float>& probabilities)
     {
         const size_t C = probabilities.size();
-        return torch::full({1, C}, 0.0);
-    }
+        torch::Tensor ret = torch::zeros({C});
+        auto a = ret.accessor<float,1>();
+        for(size_t i=0; i<C; i++)
+        {
+            a[i] = probabilities[i];
+        }
 
-    /*
-    torch::Tensor forward(torch::Tensor state_from, std::vector<torch::Tensor> states_to)
-    {
-        // TODO
-        return torch::full({1}, 0.0);
+        return ret;
     }
 
     torch::Tensor makeInputFeatures(const Checkers::State& s)
     {
-        torch::Tensor ret = torch::zeros({Checkers::N+2, Checkers::N+2, 6});
+        torch::Tensor ret = torch::zeros({5*Checkers::N});
 
-        // TODO
+        auto a = ret.accessor<float,1>();
+        for(int i=0; i<Checkers::N; i++)
+        {
+            switch(s.readCell(i))
+            {
+            case 'o':
+                a[5*i+0] = 1.0;
+                break;
+            case 'O':
+                a[5*i+1] = 1.0;
+                break;
+            case 'p':
+                a[5*i+2] = 1.0;
+                break;
+            case 'P':
+                a[5*i+3] = 1.0;
+                break;
+            case '.':
+                a[5*i+4] = 1.0;
+                break;
+            default:
+                throw std::runtime_error("internal error");
+            }
+        }
 
         return ret;
     }
-    */
 
 protected:
 
-    //torch::Tensor myWeight;
+    std::vector<torch::Tensor> myTemp0;
+    std::vector<torch::Tensor> myTemp1;
+
+    torch::Tensor myWeights1;
+    torch::Tensor myBiais1;
+    torch::Tensor myWeights2;
+    torch::Tensor myBiais2;
 };
 
 void makeTrainingTestingSets(size_t num_samples, unsigned seed, double training_ratio, std::vector<size_t>& training, std::vector<size_t>& testing)
@@ -85,7 +132,7 @@ int main(int num_args, char** args)
 {
     //const QString root_directory = "/home/victor/Dépotoire/aa";
     const QString root_directory = "/home/victor/developpement/ladis/build/instancexx";
-    const int num_epochs = 1;
+    const int num_epochs = 100;
     const double datasets_seed = 101;
     const double training_samples_ratio = 0.9;
 
@@ -104,9 +151,8 @@ int main(int num_args, char** args)
 
     ActionNetwork network;
 
-    torch::optim::Adam optimizer(network.parameters(), torch::optim::AdamOptions(1.0e-2));
+    torch::optim::Adam optimizer(network.parameters(), torch::optim::AdamOptions(1.0e-4));
 
-    int epoch = 0;
     for(int epoch=0; epoch<num_epochs; epoch++)
     {
         std::cout << "Beginning epoch " << epoch << " ..." << std::endl;
@@ -121,8 +167,9 @@ int main(int num_args, char** args)
             optimizer.zero_grad();
 
             torch::Tensor loss = torch::nn::functional::kl_div(
-                network.forward(state_from, states_to),
-                network.makeTransitionProbabilityTable(probabilities));
+                torch::unsqueeze(network.forward(state_from, states_to), 0),
+                torch::unsqueeze(network.makeTransitionProbabilityTable(probabilities), 0),
+                torch::nn::KLDivLossOptions(torch::kBatchMean));
 
             loss.backward();
 
@@ -136,14 +183,16 @@ int main(int num_args, char** args)
             dataset.getExample(i, state_from, states_to, probabilities);
 
             torch::Tensor loss = torch::nn::functional::kl_div(
-                network.forward(state_from, states_to),
-                network.makeTransitionProbabilityTable(probabilities));
+                torch::unsqueeze(network.forward(state_from, states_to), 0),
+                torch::unsqueeze(network.makeTransitionProbabilityTable(probabilities), 0),
+                torch::nn::KLDivLossOptions(torch::kBatchMean));
 
             average_testing_loss += loss.item<float>();
         }
 
         average_training_loss /= double(training.size());
         average_testing_loss /= double(testing.size());
+
         std::cout << epoch << ' ' << average_training_loss << ' ' << average_testing_loss << std::endl;
     }
 
