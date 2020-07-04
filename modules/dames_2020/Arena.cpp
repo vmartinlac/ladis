@@ -34,7 +34,7 @@ void Arena::start()
 {
     LADIS::Emulator& interface = LADIS::Emulator::getInstance();
 
-    interface.start(false);
+    interface.start(true);
 
     // let dosbox initialize.
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
@@ -321,13 +321,21 @@ void Arena::play(Agent* agent, Hook* hook)
 
                             myLog.push_back(resulting_state);
 
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
                             if(hook) hook->getLogStream() << "* Move:";
-                            std::stringstream ss;
+
                             for(int i=0; i<=requested_action.getNumMoves(); i++)
                             {
-                                //const int cell = requested_action.getTrajectory(i) + 1;
                                 const int cell = (myAgentStarts) ? (Checkers::N-requested_action.getTrajectory(i)) : (requested_action.getTrajectory(i) + 1);
-                                ss << cell << '\n';
+
+                                {
+                                    std::stringstream ss;
+                                    ss << cell << '\n';
+                                    typeText(ss.str().c_str());
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+                                }
+
                                 if(hook) hook->getLogStream() << ' ' << cell;
                             }
                             if(hook) hook->getLogStream() << std::endl;
@@ -339,10 +347,6 @@ void Arena::play(Agent* agent, Hook* hook)
                                     << resulting_state.getSquareGrid() << std::endl
                                     << std::endl;
                             }
-
-                            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                            typeText(ss.str().c_str());
-                            std::this_thread::sleep_for(std::chrono::milliseconds(4000));
                         }
                         else
                         {
