@@ -43,7 +43,6 @@
 #include "timer.h"
 #include "setup.h"
 #include "support.h"
-#include "debug.h"
 #include "mapper.h"
 #include "vga.h"
 #include "keyboard.h"
@@ -53,43 +52,6 @@
 
 #define MAPPERFILE "mapper-" VERSION ".map"
 //#define DISABLE_JOYSTICK
-
-#if C_OPENGL
-#include "SDL_opengl.h"
-
-#ifndef APIENTRY
-#define APIENTRY
-#endif
-#ifndef APIENTRYP
-#define APIENTRYP APIENTRY *
-#endif
-
-#ifndef GL_ARB_pixel_buffer_object
-#define GL_ARB_pixel_buffer_object 1
-#define GL_PIXEL_PACK_BUFFER_ARB           0x88EB
-#define GL_PIXEL_UNPACK_BUFFER_ARB         0x88EC
-#define GL_PIXEL_PACK_BUFFER_BINDING_ARB   0x88ED
-#define GL_PIXEL_UNPACK_BUFFER_BINDING_ARB 0x88EF
-#endif
-
-#ifndef GL_ARB_vertex_buffer_object
-#define GL_ARB_vertex_buffer_object 1
-typedef void (APIENTRYP PFNGLGENBUFFERSARBPROC) (GLsizei n, GLuint *buffers);
-typedef void (APIENTRYP PFNGLBINDBUFFERARBPROC) (GLenum target, GLuint buffer);
-typedef void (APIENTRYP PFNGLDELETEBUFFERSARBPROC) (GLsizei n, const GLuint *buffers);
-typedef void (APIENTRYP PFNGLBUFFERDATAARBPROC) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
-typedef GLvoid* (APIENTRYP PFNGLMAPBUFFERARBPROC) (GLenum target, GLenum access);
-typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERARBPROC) (GLenum target);
-#endif
-
-PFNGLGENBUFFERSARBPROC glGenBuffersARB = NULL;
-PFNGLBINDBUFFERARBPROC glBindBufferARB = NULL;
-PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB = NULL;
-PFNGLBUFFERDATAARBPROC glBufferDataARB = NULL;
-PFNGLMAPBUFFERARBPROC glMapBufferARB = NULL;
-PFNGLUNMAPBUFFERARBPROC glUnmapBufferARB = NULL;
-
-#endif //C_OPENGL
 
 #if !(ENVIRON_INCLUDED)
 extern char** environ;
@@ -172,20 +134,6 @@ struct SDL_Block {
 		SCREEN_TYPES type;
 		SCREEN_TYPES want_type;
 	} desktop;
-#if C_OPENGL
-	struct {
-		Bitu pitch;
-		void * framebuf;
-		GLuint buffer;
-		GLuint texture;
-		GLuint displaylist;
-		GLint max_texsize;
-		bool bilinear;
-		bool packed_pixel;
-		bool paletted_texture;
-		bool pixel_buffer_object;
-	} opengl;
-#endif
 	struct {
 		SDL_Surface * surface;
 #if (HAVE_DDRAW_H) && defined(WIN32)
@@ -231,20 +179,6 @@ SDL_Surface* SDL_SetVideoMode_Wrap(int width,int height,int bpp,Bit32u flags){
 	static Bit32u i_flags = 0;
 	if (sdl.surface != NULL && height == i_height && width == i_width && bpp == i_bpp && flags == i_flags) {
 		// I don't see a difference, so disabled for now, as the code isn't finished either
-#if SETMODE_SAVES_CLEAR
-		//TODO clear it.
-#if C_OPENGL
-		if ((flags & SDL_OPENGL)==0) 
-			SDL_FillRect(sdl.surface,NULL,SDL_MapRGB(sdl.surface->format,0,0,0));
-		else {
-			glClearColor (0.0, 0.0, 0.0, 1.0);
-			glClear(GL_COLOR_BUFFER_BIT);
-			SDL_GL_SwapBuffers();
-		}
-#else //C_OPENGL
-		SDL_FillRect(sdl.surface,NULL,SDL_MapRGB(sdl.surface->format,0,0,0));
-#endif //C_OPENGL
-#endif //SETMODE_SAVES_CLEAR
 		return sdl.surface;
 	}
 
@@ -419,14 +353,6 @@ check_gotbpp:
 		flags|=GFX_SCALING;
 		flags&=~(GFX_CAN_8|GFX_CAN_15|GFX_CAN_16);
 		break;
-#if C_OPENGL
-	case SCREEN_OPENGL:
-		//We only accept 32bit output from the scalers here
-		if (!(flags&GFX_CAN_32)) goto check_surface;
-		flags|=GFX_SCALING;
-		flags&=~(GFX_CAN_8|GFX_CAN_15|GFX_CAN_16);
-		break;
-#endif
 	default:
 		goto check_surface;
 		break;
@@ -648,106 +574,6 @@ dosurface:
 		sdl.desktop.type=SCREEN_OVERLAY;
 		retFlags = GFX_CAN_32 | GFX_SCALING | GFX_HARDWARE;
 		break;
-#if C_OPENGL
-	case SCREEN_OPENGL:
-	{
-		if (sdl.opengl.pixel_buffer_object) {
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, 0);
-			if (sdl.opengl.buffer) glDeleteBuffersARB(1, &sdl.opengl.buffer);
-		} else if (sdl.opengl.framebuf) {
-			free(sdl.opengl.framebuf);
-		}
-		sdl.opengl.framebuf=0;
-		if (!(flags&GFX_CAN_32)) goto dosurface;
-		int texsize=2 << int_log2(width > height ? width : height);
-		if (texsize>sdl.opengl.max_texsize) {
-			LOG_MSG("SDL:OPENGL:No support for texturesize of %d, falling back to surface",texsize);
-			goto dosurface;
-		}
-		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-#if SDL_VERSION_ATLEAST(1, 2, 11)
-		SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
-#endif
-		GFX_SetupSurfaceScaled(SDL_OPENGL,0);
-		if (!sdl.surface || sdl.surface->format->BitsPerPixel<15) {
-			LOG_MSG("SDL:OPENGL:Can't open drawing surface, are you running in 16bpp(or higher) mode?");
-			goto dosurface;
-		}
-		/* Create the texture and display list */
-		if (sdl.opengl.pixel_buffer_object) {
-			glGenBuffersARB(1, &sdl.opengl.buffer);
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, sdl.opengl.buffer);
-			glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_EXT, width*height*4, NULL, GL_STREAM_DRAW_ARB);
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, 0);
-		} else {
-			sdl.opengl.framebuf=malloc(width*height*4);		//32 bit color
-		}
-		sdl.opengl.pitch=width*4;
-//		glViewport(sdl.clip.x,sdl.clip.y,sdl.clip.w,sdl.clip.h);
-		if(sdl.clip.x ==0 && sdl.clip.y ==0 && sdl.desktop.fullscreen && !sdl.desktop.full.fixed && (sdl.clip.w != sdl.surface->w || sdl.clip.h != sdl.surface->h)) { 
-		//	LOG_MSG("attempting to fix the centering to %d %d %d %d",(sdl.surface->w-sdl.clip.w)/2,(sdl.surface->h-sdl.clip.h)/2,sdl.clip.w,sdl.clip.h);
-			glViewport((sdl.surface->w-sdl.clip.w)/2,(sdl.surface->h-sdl.clip.h)/2,sdl.clip.w,sdl.clip.h);
-		}
-		else {
-			glViewport(sdl.clip.x,sdl.clip.y,sdl.clip.w,sdl.clip.h);
-		}
-		glMatrixMode (GL_PROJECTION);
-		glDeleteTextures(1,&sdl.opengl.texture);
- 		glGenTextures(1,&sdl.opengl.texture);
-		glBindTexture(GL_TEXTURE_2D,sdl.opengl.texture);
-		// No borders
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		if (sdl.opengl.bilinear) {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		} else {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		}
-
-		Bit8u* emptytex = new Bit8u[texsize * texsize * 4];
-		memset((void*) emptytex, 0, texsize * texsize * 4);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, (const GLvoid*)emptytex);
-		delete [] emptytex;
-
-		glClearColor (0.0, 0.0, 0.0, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT);
-		SDL_GL_SwapBuffers();
-		glClear(GL_COLOR_BUFFER_BIT);
-		glShadeModel (GL_FLAT);
-		glDisable (GL_DEPTH_TEST);
-		glDisable (GL_LIGHTING);
-		glDisable(GL_CULL_FACE);
-		glEnable(GL_TEXTURE_2D);
-		glMatrixMode (GL_MODELVIEW);
-		glLoadIdentity ();
-
-		GLfloat tex_width=((GLfloat)(width)/(GLfloat)texsize);
-		GLfloat tex_height=((GLfloat)(height)/(GLfloat)texsize);
-
-		if (glIsList(sdl.opengl.displaylist)) glDeleteLists(sdl.opengl.displaylist, 1);
-		sdl.opengl.displaylist = glGenLists(1);
-		glNewList(sdl.opengl.displaylist, GL_COMPILE);
-		glBindTexture(GL_TEXTURE_2D, sdl.opengl.texture);
-		glBegin(GL_QUADS);
-		// lower left
-		glTexCoord2f(0,tex_height); glVertex2f(-1.0f,-1.0f);
-		// lower right
-		glTexCoord2f(tex_width,tex_height); glVertex2f(1.0f, -1.0f);
-		// upper right
-		glTexCoord2f(tex_width,0); glVertex2f(1.0f, 1.0f);
-		// upper left
-		glTexCoord2f(0,0); glVertex2f(-1.0f, 1.0f);
-		glEnd();
-		glEndList();
-		sdl.desktop.type=SCREEN_OPENGL;
-		retFlags = GFX_CAN_32 | GFX_SCALING;
-		if (sdl.opengl.pixel_buffer_object)
-			retFlags |= GFX_HARDWARE;
-	break;
-		}//OPENGL
-#endif	//C_OPENGL
 	default:
 		goto dosurface;
 		break;
@@ -831,17 +657,6 @@ bool GFX_StartUpdate(Bit8u * & pixels,Bitu & pitch) {
 		pitch=*(sdl.overlay->pitches);
 		sdl.updating=true;
 		return true;
-#if C_OPENGL
-	case SCREEN_OPENGL:
-		if(sdl.opengl.pixel_buffer_object) {
-		    glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, sdl.opengl.buffer);
-		    pixels=(Bit8u *)glMapBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, GL_WRITE_ONLY);
-		} else
-		    pixels=(Bit8u *)sdl.opengl.framebuf;
-		pitch=sdl.opengl.pitch;
-		sdl.updating=true;
-		return true;
-#endif
 	default:
 		break;
 	}
@@ -915,42 +730,6 @@ void GFX_EndUpdate( const Bit16u *changedLines ) {
 		SDL_UnlockYUVOverlay(sdl.overlay);
 		SDL_DisplayYUVOverlay(sdl.overlay,&sdl.clip);
 		break;
-#if C_OPENGL
-	case SCREEN_OPENGL:
-		// Clear drawing area. Some drivers (on Linux) have more than 2 buffers and the screen might
-		// be dirty because of other programs.
-		glClearColor (0.0, 0.0, 0.0, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT);
-		if (sdl.opengl.pixel_buffer_object) {
-			glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT);
-			glBindTexture(GL_TEXTURE_2D, sdl.opengl.texture);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-					sdl.draw.width, sdl.draw.height, GL_BGRA_EXT,
-					GL_UNSIGNED_INT_8_8_8_8_REV, 0);
-			glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_EXT, 0);
-			glCallList(sdl.opengl.displaylist);
-			SDL_GL_SwapBuffers();
-		} else if (changedLines) {
-			Bitu y = 0, index = 0;
-			glBindTexture(GL_TEXTURE_2D, sdl.opengl.texture);
-			while (y < sdl.draw.height) {
-				if (!(index & 1)) {
-					y += changedLines[index];
-				} else {
-					Bit8u *pixels = (Bit8u *)sdl.opengl.framebuf + y * sdl.opengl.pitch;
-					Bitu height = changedLines[index];
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y,
-						sdl.draw.width, height, GL_BGRA_EXT,
-						GL_UNSIGNED_INT_8_8_8_8_REV, pixels );
-					y += height;
-				}
-				index++;
-			}
-			glCallList(sdl.opengl.displaylist);
-			SDL_GL_SwapBuffers();
-		}
-		break;
-#endif
 	default:
 		break;
 	}
@@ -1219,52 +998,12 @@ static void GUI_StartUp(Section * sec) {
 #endif
 	} else if (output == "overlay") {
 		sdl.desktop.want_type=SCREEN_OVERLAY;
-#if C_OPENGL
-	} else if (output == "opengl") {
-		sdl.desktop.want_type=SCREEN_OPENGL;
-		sdl.opengl.bilinear=true;
-	} else if (output == "openglnb") {
-		sdl.desktop.want_type=SCREEN_OPENGL;
-		sdl.opengl.bilinear=false;
-#endif
 	} else {
 		LOG_MSG("SDL:Unsupported output device %s, switching back to surface",output.c_str());
 		sdl.desktop.want_type=SCREEN_SURFACE;//SHOULDN'T BE POSSIBLE anymore
 	}
 
 	sdl.overlay=0;
-#if C_OPENGL
-   if(sdl.desktop.want_type==SCREEN_OPENGL){ /* OPENGL is requested */
-	sdl.surface=SDL_SetVideoMode_Wrap(640,400,0,SDL_OPENGL);
-	if (sdl.surface == NULL) {
-		LOG_MSG("Could not initialize OpenGL, switching back to surface");
-		sdl.desktop.want_type=SCREEN_SURFACE;
-	} else {
-	sdl.opengl.buffer=0;
-	sdl.opengl.framebuf=0;
-	sdl.opengl.texture=0;
-	sdl.opengl.displaylist=0;
-	glGetIntegerv (GL_MAX_TEXTURE_SIZE, &sdl.opengl.max_texsize);
-	glGenBuffersARB = (PFNGLGENBUFFERSARBPROC)SDL_GL_GetProcAddress("glGenBuffersARB");
-	glBindBufferARB = (PFNGLBINDBUFFERARBPROC)SDL_GL_GetProcAddress("glBindBufferARB");
-	glDeleteBuffersARB = (PFNGLDELETEBUFFERSARBPROC)SDL_GL_GetProcAddress("glDeleteBuffersARB");
-	glBufferDataARB = (PFNGLBUFFERDATAARBPROC)SDL_GL_GetProcAddress("glBufferDataARB");
-	glMapBufferARB = (PFNGLMAPBUFFERARBPROC)SDL_GL_GetProcAddress("glMapBufferARB");
-	glUnmapBufferARB = (PFNGLUNMAPBUFFERARBPROC)SDL_GL_GetProcAddress("glUnmapBufferARB");
-	const char * gl_ext = (const char *)glGetString (GL_EXTENSIONS);
-	if(gl_ext && *gl_ext){
-		sdl.opengl.packed_pixel=(strstr(gl_ext,"EXT_packed_pixels") != NULL);
-		sdl.opengl.paletted_texture=(strstr(gl_ext,"EXT_paletted_texture") != NULL);
-		sdl.opengl.pixel_buffer_object=(strstr(gl_ext,"GL_ARB_pixel_buffer_object") != NULL ) &&
-		    glGenBuffersARB && glBindBufferARB && glDeleteBuffersARB && glBufferDataARB &&
-		    glMapBufferARB && glUnmapBufferARB;
-    	} else {
-		sdl.opengl.packed_pixel=sdl.opengl.paletted_texture=false;
-	}
-	}
-	} /* OPENGL is requested end */
-
-#endif	//OPENGL
 	/* Initialize screen for first time */
 	sdl.surface=SDL_SetVideoMode_Wrap(640,400,0,0);
 	if (sdl.surface == NULL) E_Exit("Could not initialize video: %s",SDL_GetError());
@@ -1285,67 +1024,6 @@ static void GUI_StartUp(Section * sec) {
     Bit32u gmask = 0x0000ff00;
     Bit32u bmask = 0x00ff0000;
 //#endif
-
-/* Please leave the Splash screen stuff in working order in DOSBox. We spend a lot of time making DOSBox. */
-	SDL_Surface* splash_surf = SDL_CreateRGBSurface(SDL_SWSURFACE, 640, 400, 32, rmask, gmask, bmask, 0);
-	if (splash_surf) {
-		SDL_FillRect(splash_surf, NULL, SDL_MapRGB(splash_surf->format, 0, 0, 0));
-
-		Bit8u* tmpbufp = new Bit8u[640*400*3];
-		GIMP_IMAGE_RUN_LENGTH_DECODE(tmpbufp,gimp_image.rle_pixel_data,640*400,3);
-		for (Bitu y=0; y<400; y++) {
-
-			Bit8u* tmpbuf = tmpbufp + y*640*3;
-			Bit32u * draw=(Bit32u*)(((Bit8u *)splash_surf->pixels)+((y)*splash_surf->pitch));
-			for (Bitu x=0; x<640; x++) {
-//#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-//				*draw++ = tmpbuf[x*3+2]+tmpbuf[x*3+1]*0x100+tmpbuf[x*3+0]*0x10000+0x00000000;
-//#else
-				*draw++ = tmpbuf[x*3+0]+tmpbuf[x*3+1]*0x100+tmpbuf[x*3+2]*0x10000+0x00000000;
-//#endif
-			}
-		}
-
-		bool exit_splash = false;
-
-		static Bitu max_splash_loop = 600;
-		static Bitu splash_fade = 100;
-		static bool use_fadeout = true;
-
-		for (Bit32u ct = 0,startticks = GetTicks();ct < max_splash_loop;ct = GetTicks()-startticks) {
-			SDL_Event evt;
-			while (SDL_PollEvent(&evt)) {
-				if (evt.type == SDL_QUIT) {
-					exit_splash = true;
-					break;
-				}
-			}
-			if (exit_splash) break;
-
-			if (ct<1) {
-				SDL_FillRect(sdl.surface, NULL, SDL_MapRGB(sdl.surface->format, 0, 0, 0));
-				SDL_SetAlpha(splash_surf, SDL_SRCALPHA,255);
-				SDL_BlitSurface(splash_surf, NULL, sdl.surface, NULL);
-				SDL_Flip(sdl.surface);
-			} else if (ct>=max_splash_loop-splash_fade) {
-				if (use_fadeout) {
-					SDL_FillRect(sdl.surface, NULL, SDL_MapRGB(sdl.surface->format, 0, 0, 0));
-					SDL_SetAlpha(splash_surf, SDL_SRCALPHA, (Bit8u)((max_splash_loop-1-ct)*255/(splash_fade-1)));
-					SDL_BlitSurface(splash_surf, NULL, sdl.surface, NULL);
-					SDL_Flip(sdl.surface);
-				}
-			}
-
-		}
-
-		if (use_fadeout) {
-			SDL_FillRect(sdl.surface, NULL, SDL_MapRGB(sdl.surface->format, 0, 0, 0));
-			SDL_Flip(sdl.surface);
-		}
-		SDL_FreeSurface(splash_surf);
-		delete [] tmpbufp;
-
-	}
 
 	/* Get some Event handlers */
 	MAPPER_AddHandler(KillSwitch,MK_f9,MMOD1,"shutdown","ShutDown");
@@ -1652,18 +1330,8 @@ void Config_Add_SDL() {
 
 	const char* outputs[] = {
 		"surface", "overlay",
-#if C_OPENGL
-		"opengl", "openglnb",
-#endif
-#if (HAVE_DDRAW_H) && defined(WIN32)
-		"ddraw",
-#endif
 		0 };
-#if C_OPENGL && defined(MACOSX)
-	Pstring = sdl_sec->Add_string("output",Property::Changeable::Always,"opengl");
-#else
 	Pstring = sdl_sec->Add_string("output",Property::Changeable::Always,"surface");
-#endif
 	Pstring->Set_help("What video system to use for output.");
 	Pstring->Set_values(outputs);
 
@@ -1739,110 +1407,9 @@ static void show_warning(char const * const message) {
 	SDL_Delay(12000);
 }
    
-static void launcheditor() {
-	std::string path,file;
-	Cross::CreatePlatformConfigDir(path);
-	Cross::GetPlatformConfigName(file);
-	path += file;
-	FILE* f = fopen(path.c_str(),"r");
-	if(!f && !control->PrintConfig(path.c_str())) {
-		printf("tried creating %s. but failed.\n",path.c_str());
-		exit(1);
-	}
-	if(f) fclose(f);
-/*	if(edit.empty()) {
-		printf("no editor specified.\n");
-		exit(1);
-	}*/
-	std::string edit;
-	while(control->cmdline->FindString("-editconf",edit,true)) //Loop until one succeeds
-		execlp(edit.c_str(),edit.c_str(),path.c_str(),(char*) 0);
-	//if you get here the launching failed!
-	printf("can't find editor(s) specified at the command line.\n");
-	exit(1);
-}
-static void launchcaptures(std::string const& edit) {
-	std::string path,file;
-	Section* t = control->GetSection("dosbox");
-	if(t) file = t->GetPropValue("captures");
-	if(!t || file == NO_SUCH_PROPERTY) {
-		printf("Config system messed up.\n");
-		exit(1);
-	}
-	Cross::CreatePlatformConfigDir(path);
-	path += file;
-	Cross::CreateDir(path);
-	struct stat cstat;
-	if(stat(path.c_str(),&cstat) || (cstat.st_mode & S_IFDIR) == 0) {
-		printf("%s doesn't exists or isn't a directory.\n",path.c_str());
-		exit(1);
-	}
-/*	if(edit.empty()) {
-		printf("no editor specified.\n");
-		exit(1);
-	}*/
-
-	execlp(edit.c_str(),edit.c_str(),path.c_str(),(char*) 0);
-	//if you get here the launching failed!
-	printf("can't find filemanager %s\n",edit.c_str());
-	exit(1);
-}
-
-static void printconfiglocation() {
-	std::string path,file;
-	Cross::CreatePlatformConfigDir(path);
-	Cross::GetPlatformConfigName(file);
-	path += file;
-     
-	FILE* f = fopen(path.c_str(),"r");
-	if(!f && !control->PrintConfig(path.c_str())) {
-		printf("tried creating %s. but failed",path.c_str());
-		exit(1);
-	}
-	if(f) fclose(f);
-	printf("%s\n",path.c_str());
-	exit(0);
-}
-
-static void eraseconfigfile() {
-	FILE* f = fopen("dosbox.conf","r");
-	if(f) {
-		fclose(f);
-		show_warning("Warning: dosbox.conf exists in current working directory.\nThis will override the configuration file at runtime.\n");
-	}
-	std::string path,file;
-	Cross::GetPlatformConfigDir(path);
-	Cross::GetPlatformConfigName(file);
-	path += file;
-	f = fopen(path.c_str(),"r");
-	if(!f) exit(0);
-	fclose(f);
-	unlink(path.c_str());
-	exit(0);
-}
-
-static void erasemapperfile() {
-	FILE* g = fopen("dosbox.conf","r");
-	if(g) {
-		fclose(g);
-		show_warning("Warning: dosbox.conf exists in current working directory.\nKeymapping might not be properly reset.\n"
-		             "Please reset configuration as well and delete the dosbox.conf.\n");
-	}
-
-	std::string path,file=MAPPERFILE;
-	Cross::GetPlatformConfigDir(path);
-	path += file;
-	FILE* f = fopen(path.c_str(),"r");
-	if(!f) exit(0);
-	fclose(f);
-	unlink(path.c_str());
-	exit(0);
-}
-
-
 
 //extern void UI_Init(void);
-int DOSBOX_main()
+int DOSBOX_main(const char* config_string)
 {
 	try {
 		CommandLine com_line(0, NULL);
@@ -1853,76 +1420,9 @@ int DOSBOX_main()
 		DOSBOX_Init();
 
 		std::string editor;
-		if(control->cmdline->FindString("-editconf",editor,false)) launcheditor();
-		if(control->cmdline->FindString("-opencaptures",editor,true)) launchcaptures(editor);
-		if(control->cmdline->FindExist("-eraseconf")) eraseconfigfile();
-		if(control->cmdline->FindExist("-resetconf")) eraseconfigfile();
-		if(control->cmdline->FindExist("-erasemapper")) erasemapperfile();
-		if(control->cmdline->FindExist("-resetmapper")) erasemapperfile();
-
-		/* Can't disable the console with debugger enabled */
-#if defined(WIN32) && !(C_DEBUG)
-		if (control->cmdline->FindExist("-noconsole")) {
-			FreeConsole();
-			/* Redirect standard input and standard output */
-			if(freopen(STDOUT_FILE, "w", stdout) == NULL)
-				no_stdout = true; // No stdout so don't write messages
-			freopen(STDERR_FILE, "w", stderr);
-			setvbuf(stdout, NULL, _IOLBF, BUFSIZ);	/* Line buffered */
-			setbuf(stderr, NULL);					/* No buffering */
-		} else {
-			if (AllocConsole()) {
-				fclose(stdin);
-				fclose(stdout);
-				fclose(stderr);
-				freopen("CONIN$","r",stdin);
-				freopen("CONOUT$","w",stdout);
-				freopen("CONOUT$","w",stderr);
-			}
-			SetConsoleTitle("DOSBox Status Window");
-		}
-#endif  //defined(WIN32) && !(C_DEBUG)
-		if (control->cmdline->FindExist("-version") ||
-		    control->cmdline->FindExist("--version") ) {
-			printf("\nDOSBox version %s, copyright 2002-2019 DOSBox Team.\n\n",VERSION);
-			printf("DOSBox is written by the DOSBox Team (See AUTHORS file))\n");
-			printf("DOSBox comes with ABSOLUTELY NO WARRANTY.  This is free software,\n");
-			printf("and you are welcome to redistribute it under certain conditions;\n");
-			printf("please read the COPYING file thoroughly before doing so.\n\n");
-			return 0;
-		}
-		if(control->cmdline->FindExist("-printconf")) printconfiglocation();
-
-#if C_DEBUG
-		DEBUG_SetupConsole();
-#endif
-
-#if defined(WIN32)
-	SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleEventHandler,TRUE);
-#endif
-
-#ifdef OS2
-        PPIB pib;
-        PTIB tib;
-        DosGetInfoBlocks(&tib, &pib);
-        if (pib->pib_ultype == 2) pib->pib_ultype = 3;
-        setbuf(stdout, NULL);
-        setbuf(stderr, NULL);
-#endif
-
-	/* Display Welcometext in the console */
-	LOG_MSG("DOSBox version %s",VERSION);
-	LOG_MSG("Copyright 2002-2019 DOSBox Team, published under GNU GPL.");
-	LOG_MSG("---");
 
 	/* Init SDL */
-#if SDL_VERSION_ATLEAST(1, 2, 14)
-	/* Or debian/ubuntu with older libsdl version as they have done this themselves, but then differently.
-	 * with this variable they will work correctly. I've only tested the 1.2.14 behaviour against the windows version
-	 * of libsdl
-	 */
-	putenv(const_cast<char*>("SDL_DISABLE_LOCK_KEYS=1"));
-#endif
+
 	// Don't init timers, GetTicks seems to work fine and they can use a fair amount of power (Macs again) 
 	// Please report problems with audio and other things.
 	if ( SDL_Init( SDL_INIT_AUDIO|SDL_INIT_VIDEO | /*SDL_INIT_TIMER |*/ SDL_INIT_CDROM
@@ -1939,135 +1439,27 @@ int DOSBOX_main()
 	sdl.laltstate = SDL_KEYUP;
 	sdl.raltstate = SDL_KEYUP;
 
-#if defined (WIN32)
-#if SDL_VERSION_ATLEAST(1, 2, 10)
-		sdl.using_windib=true;
-#else
-		sdl.using_windib=false;
-#endif
-		char sdl_drv_name[128];
-		if (getenv("SDL_VIDEODRIVER")==NULL) {
-			if (SDL_VideoDriverName(sdl_drv_name,128)!=NULL) {
-				sdl.using_windib=false;
-				if (strcmp(sdl_drv_name,"directx")!=0) {
-					SDL_QuitSubSystem(SDL_INIT_VIDEO);
-					putenv("SDL_VIDEODRIVER=directx");
-					if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) {
-						putenv("SDL_VIDEODRIVER=windib");
-						if (SDL_InitSubSystem(SDL_INIT_VIDEO)<0) E_Exit("Can't init SDL Video %s",SDL_GetError());
-						sdl.using_windib=true;
-					}
-				}
-			}
-		} else {
-			char* sdl_videodrv = getenv("SDL_VIDEODRIVER");
-			if (strcmp(sdl_videodrv,"directx")==0) sdl.using_windib = false;
-			else if (strcmp(sdl_videodrv,"windib")==0) sdl.using_windib = true;
-		}
-		if (SDL_VideoDriverName(sdl_drv_name,128)!=NULL) {
-			if (strcmp(sdl_drv_name,"windib")==0) LOG_MSG("SDL_Init: Starting up with SDL windib video driver.\n          Try to update your video card and directx drivers!");
-		}
-#endif
 	sdl.num_joysticks=SDL_NumJoysticks();
 
-	/* Parse configuration files */
-	std::string config_file,config_path;
-	bool parsed_anyconfigfile = false;
-	//First Parse -userconf
-	if(control->cmdline->FindExist("-userconf",true)){
-		config_file.clear();
-		Cross::GetPlatformConfigDir(config_path);
-		Cross::GetPlatformConfigName(config_file);
-		config_path += config_file;
-		if(control->ParseConfigFile(config_path.c_str())) parsed_anyconfigfile = true;
-		if(!parsed_anyconfigfile) {
-			//Try to create the userlevel configfile.
-			config_file.clear();
-			Cross::CreatePlatformConfigDir(config_path);
-			Cross::GetPlatformConfigName(config_file);
-			config_path += config_file;
-			if(control->PrintConfig(config_path.c_str())) {
-				LOG_MSG("CONFIG: Generating default configuration.\nWriting it to %s",config_path.c_str());
-				//Load them as well. Makes relative paths much easier
-				if(control->ParseConfigFile(config_path.c_str())) parsed_anyconfigfile = true;
-			}
-		}
-	}
+    control->ParseConfig(config_string);
 
-	//Second parse -conf entries
-	while(control->cmdline->FindString("-conf",config_file,true))
-		if (control->ParseConfigFile(config_file.c_str())) parsed_anyconfigfile = true;
-
-	//if none found => parse localdir conf
-	config_file = "dosbox.conf";
-	if (!parsed_anyconfigfile && control->ParseConfigFile(config_file.c_str())) parsed_anyconfigfile = true;
-
-	//if none found => parse userlevel conf
-	if(!parsed_anyconfigfile) {
-		config_file.clear();
-		Cross::GetPlatformConfigDir(config_path);
-		Cross::GetPlatformConfigName(config_file);
-		config_path += config_file;
-		if(control->ParseConfigFile(config_path.c_str())) parsed_anyconfigfile = true;
-	}
-
-	if(!parsed_anyconfigfile) {
-		//Try to create the userlevel configfile.
-		config_file.clear();
-		Cross::CreatePlatformConfigDir(config_path);
-		Cross::GetPlatformConfigName(config_file);
-		config_path += config_file;
-		if(control->PrintConfig(config_path.c_str())) {
-			LOG_MSG("CONFIG: Generating default configuration.\nWriting it to %s",config_path.c_str());
-			//Load them as well. Makes relative paths much easier
-			control->ParseConfigFile(config_path.c_str());
-		} else {
-			LOG_MSG("CONFIG: Using default settings. Create a configfile to change them");
-		}
-	}
-
-
-#if (ENVIRON_LINKED)
-		control->ParseEnv(environ);
-#endif
-//		UI_Init();
-//		if (control->cmdline->FindExist("-startui")) UI_Run(false);
-		/* Init all the sections */
 		control->Init();
-		/* Some extra SDL Functions */
 		Section_prop * sdl_sec=static_cast<Section_prop *>(control->GetSection("sdl"));
-
-		if (control->cmdline->FindExist("-fullscreen") || sdl_sec->Get_bool("fullscreen")) {
-			if(!sdl.desktop.fullscreen) { //only switch if not allready in fullscreen
-				GFX_SwitchFullScreen();
-			}
-		}
 
 		/* Init the keyMapper */
 		MAPPER_Init();
-		if (control->cmdline->FindExist("-startmapper")) MAPPER_RunInternal();
-		/* Start up main machine */
 		control->StartUp();
-		/* Shutdown everything */
-	} catch (char * error) {
+	}
+    catch (char * error)
+    {
 		GFX_ShowMsg("Exit to error: %s",error);
 		fflush(NULL);
-		if(sdl.wait_on_error) {
-			//TODO Maybe look for some way to show message in linux?
-#if (C_DEBUG)
-			GFX_ShowMsg("Press enter to continue");
-			fflush(NULL);
-			fgetc(stdin);
-#elif defined(WIN32)
-			Sleep(5000);
-#endif
-		}
-
 	}
-	catch (int){
-		;//nothing pressed killswitch
+	catch (int)
+    {
 	}
-	catch(...){
+	catch(...)
+    {
 		//Force visible mouse to end user. Somehow this sometimes doesn't happen
 		SDL_WM_GrabInput(SDL_GRAB_OFF);
 		SDL_ShowCursor(SDL_ENABLE);
@@ -2086,3 +1478,4 @@ void GFX_GetSize(int &width, int &height, bool &fullscreen) {
 	height = sdl.draw.height;
 	fullscreen = sdl.desktop.fullscreen;
 }
+

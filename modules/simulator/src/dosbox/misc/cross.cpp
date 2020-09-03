@@ -25,78 +25,10 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#ifdef WIN32
-#ifndef _WIN32_IE
-#define _WIN32_IE 0x0400
-#endif
-#include <shlobj.h>
-#endif
-
 #if defined HAVE_SYS_TYPES_H && defined HAVE_PWD_H
 #include <sys/types.h>
 #include <pwd.h>
 #endif
-
-#ifdef WIN32
-static void W32_ConfDir(std::string& in,bool create) {
-	int c = create?1:0;
-	char result[MAX_PATH] = { 0 };
-	BOOL r = SHGetSpecialFolderPath(NULL,result,CSIDL_LOCAL_APPDATA,c);
-	if(!r || result[0] == 0) r = SHGetSpecialFolderPath(NULL,result,CSIDL_APPDATA,c);
-	if(!r || result[0] == 0) {
-		char const * windir = getenv("windir");
-		if(!windir) windir = "c:\\windows";
-		safe_strncpy(result,windir,MAX_PATH);
-		char const* appdata = "\\Application Data";
-		size_t len = strlen(result);
-		if(len + strlen(appdata) < MAX_PATH) strcat(result,appdata);
-		if(create) mkdir(result);
-	}
-	in = result;
-}
-#endif
-
-void Cross::GetPlatformConfigDir(std::string& in) {
-#ifdef WIN32
-	W32_ConfDir(in,false);
-	in += "\\DOSBox";
-#elif defined(MACOSX)
-	in = "~/Library/Preferences";
-	ResolveHomedir(in);
-#else
-	in = "~/.dosbox";
-	ResolveHomedir(in);
-#endif
-	in += CROSS_FILESPLIT;
-}
-
-void Cross::GetPlatformConfigName(std::string& in) {
-#ifdef WIN32
-#define DEFAULT_CONFIG_FILE "dosbox-" VERSION ".conf"
-#elif defined(MACOSX)
-#define DEFAULT_CONFIG_FILE "DOSBox " VERSION " Preferences"
-#else /*linux freebsd*/
-#define DEFAULT_CONFIG_FILE "dosbox-" VERSION ".conf"
-#endif
-	in = DEFAULT_CONFIG_FILE;
-}
-
-void Cross::CreatePlatformConfigDir(std::string& in) {
-#ifdef WIN32
-	W32_ConfDir(in,true);
-	in += "\\DOSBox";
-	mkdir(in.c_str());
-#elif defined(MACOSX)
-	in = "~/Library/Preferences/";
-	ResolveHomedir(in);
-	//Don't create it. Assume it exists
-#else
-	in = "~/.dosbox";
-	ResolveHomedir(in);
-	mkdir(in.c_str(),0700);
-#endif
-	in += CROSS_FILESPLIT;
-}
 
 void Cross::ResolveHomedir(std::string & temp_line) {
 	if(!temp_line.size() || temp_line[0] != '~') return; //No ~
@@ -116,67 +48,8 @@ void Cross::ResolveHomedir(std::string & temp_line) {
 }
 
 void Cross::CreateDir(std::string const& in) {
-#ifdef WIN32
-	mkdir(in.c_str());
-#else
 	mkdir(in.c_str(),0700);
-#endif
 }
-
-#if defined (WIN32)
-
-dir_information* open_directory(const char* dirname) {
-	if (dirname == NULL) return NULL;
-
-	size_t len = strlen(dirname);
-	if (len == 0) return NULL;
-
-	static dir_information dir;
-
-	safe_strncpy(dir.base_path,dirname,MAX_PATH);
-
-	if (dirname[len-1] == '\\') strcat(dir.base_path,"*.*");
-	else                        strcat(dir.base_path,"\\*.*");
-
-	dir.handle = INVALID_HANDLE_VALUE;
-
-	return (access(dirname,0) ? NULL : &dir);
-}
-
-bool read_directory_first(dir_information* dirp, char* entry_name, bool& is_directory) {
-	dirp->handle = FindFirstFile(dirp->base_path, &dirp->search_data);
-	if (INVALID_HANDLE_VALUE == dirp->handle) {
-		return false;
-	}
-
-	safe_strncpy(entry_name,dirp->search_data.cFileName,(MAX_PATH<CROSS_LEN)?MAX_PATH:CROSS_LEN);
-
-	if (dirp->search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) is_directory = true;
-	else is_directory = false;
-
-	return true;
-}
-
-bool read_directory_next(dir_information* dirp, char* entry_name, bool& is_directory) {
-	int result = FindNextFile(dirp->handle, &dirp->search_data);
-	if (result==0) return false;
-
-	safe_strncpy(entry_name,dirp->search_data.cFileName,(MAX_PATH<CROSS_LEN)?MAX_PATH:CROSS_LEN);
-
-	if (dirp->search_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) is_directory = true;
-	else is_directory = false;
-
-	return true;
-}
-
-void close_directory(dir_information* dirp) {
-	if (dirp->handle != INVALID_HANDLE_VALUE) {
-		FindClose(dirp->handle);
-		dirp->handle = INVALID_HANDLE_VALUE;
-	}
-}
-
-#else
 
 dir_information* open_directory(const char* dirname) {
 	static dir_information dir;
@@ -252,21 +125,16 @@ void close_directory(dir_information* dirp) {
 	closedir(dirp->dir);
 }
 
-#endif
-
 FILE *fopen_wrap(const char *path, const char *mode) {
-#if defined(WIN32) || defined(OS2)
-	;
-#elif defined (MACOSX)
-	;
-#else  
 #if defined (HAVE_REALPATH)
 	char work[CROSS_LEN] = {0};
 	strncpy(work,path,CROSS_LEN-1);
 	char* last = strrchr(work,'/');
 	
-	if (last) {
-		if (last != work) {
+	if (last)
+    {
+		if (last != work)
+        {
 			*last = 0;
 			//If this compare fails, then we are dealing with files in / 
 			//Which is outside the scope, but test anyway. 
@@ -274,8 +142,10 @@ FILE *fopen_wrap(const char *path, const char *mode) {
 			//in that case not done against new files.
 		}
 		char* check = realpath(work,NULL);
-		if (check) {
-			if ( ( strlen(check) == 5 && strcmp(check,"/proc") == 0) || strncmp(check,"/proc/",6) == 0) {
+		if (check)
+        {
+			if ( ( strlen(check) == 5 && strcmp(check,"/proc") == 0) || strncmp(check,"/proc/",6) == 0)
+            {
 //				LOG_MSG("lst hit %s blocking!",path);
 				free(check);
 				return NULL;
@@ -284,29 +154,8 @@ FILE *fopen_wrap(const char *path, const char *mode) {
 		}
 	}
 
-#if 0
-//Lightweight version, but then existing files can still be read, which is not ideal	
-	if (strpbrk(mode,"aw+") != NULL) {
-		LOG_MSG("pbrk ok");
-		char* check = realpath(path,NULL);
-		//Will be null if file doesn't exist.... ENOENT
-		//TODO What about unlink /proc/self/mem and then create it ?
-		//Should be safe for what we want..
-		if (check) {
-			if (strncmp(check,"/proc/",6) == 0) {
-				free(check);
-				return NULL;
-			}
-			free(check);
-		}
-	}
-*/
-#endif //0 
-
 #endif //HAVE_REALPATH
-#endif
 
 	return fopen(path,mode);
 }
-
 

@@ -7,7 +7,7 @@
 #include "LADIS_glue.h"
 #include "LADIS.h"
 
-int DOSBOX_main();
+int DOSBOX_main(const char* config_string);
 
 namespace LADIS
 {
@@ -50,7 +50,7 @@ namespace LADIS
         {
             auto proc = [] ()
             {
-                DOSBOX_main();
+                DOSBOX_main("");
             };
 
             if(internals)
@@ -262,7 +262,17 @@ namespace LADIS
         internals->with_ui = with_ui;
         internals->thread_ai = std::thread(entry_point_ai);
 
-        DOSBOX_main();
+        std::cout << "hello" << std::endl;
+
+        const char* config_string =
+            "[render]\n"
+            "scaler=none\n"
+            "[autoexec]\n"
+            "#keyb fr\n"
+            "mount c: /DATA/victor/emulation/dosbox\n"
+            "c:\n";
+        DOSBOX_main(config_string);
+
 
         internals->thread_ai.join();
         internals.reset();

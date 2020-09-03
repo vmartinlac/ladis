@@ -78,7 +78,7 @@ public:
 	void ShutDown();
 	void StartUp();
 	bool PrintConfig(char const * const configfilename) const;
-	bool ParseConfigFile(char const * const configfilename);
+	bool ParseConfig(const char* config);
 	void ParseEnv(char ** envp);
 	bool SecureMode() const { return secure_mode; }
 	void SwitchToSecureMode() { secure_mode = true; }//can't be undone

@@ -30,7 +30,7 @@
 #include <string>
   
 #include "dosbox.h"
-#include "debug.h"
+//#include "debug.h"
 #include "support.h"
 #include "video.h"
 

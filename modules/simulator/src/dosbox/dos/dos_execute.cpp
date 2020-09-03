@@ -25,7 +25,6 @@
 #include "dos_inc.h"
 #include "regs.h"
 #include "callback.h"
-#include "debug.h"
 #include "cpu.h"
 
 const char * RunningProgram="DOSBOX";

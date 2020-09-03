@@ -24,7 +24,6 @@
 #include "lazyflags.h"
 #include "paging.h"
 #include "fpu.h"
-#include "debug.h"
 #include "inout.h"
 #include "callback.h"
 

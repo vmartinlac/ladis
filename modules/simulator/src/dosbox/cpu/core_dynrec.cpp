@@ -47,7 +47,6 @@
 #include "regs.h"
 #include "mem.h"
 #include "cpu.h"
-#include "debug.h"
 #include "paging.h"
 #include "inout.h"
 #include "lazyflags.h"

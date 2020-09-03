@@ -31,7 +31,6 @@
 #include <stdio.h>
 
 using namespace std;
-static std::string current_config_dir; // Set by parseconfigfile so Prop_path can use it to construct the realpath
 void Value::destroy() throw(){
 	if (type == V_STRING) delete _string;
 }
@@ -281,27 +280,11 @@ bool Prop_string::CheckValue(Value const& in, bool warn){
 	return false;
 }
 
-void Prop_path::SetValue(std::string const& input){
-	//Special version to merge realpath with it
-
+void Prop_path::SetValue(std::string const& input)
+{
 	Value val(input,Value::V_STRING);
 	SetVal(val,false,true);
-
-	if(input.empty()) {
-		realpath = "";
-		return;
-	}
-	std::string workcopy(input);
-	Cross::ResolveHomedir(workcopy); //Parse ~ and friends
-	//Prepend config directory in it exists. Check for absolute paths later
-	if( current_config_dir.empty()) realpath = workcopy;
-	else realpath = current_config_dir + CROSS_FILESPLIT + workcopy;
-	//Absolute paths
-#if defined (WIN32) || defined(OS2)
-	if( workcopy.size() > 2 && workcopy[1] == ':' ) realpath = workcopy;
-#else
-	if( workcopy.size() > 1 && workcopy[0] == '/' ) realpath = workcopy;
-#endif
+    realpath = input;
 }
 	
 void Prop_bool::SetValue(std::string const& input){
@@ -769,30 +752,33 @@ Section* Config::GetSectionFromProperty(char const * const prop) const{
 }
 
 
-bool Config::ParseConfigFile(char const * const configfilename){
+bool Config::ParseConfig(const char* config_text)
+{
 	static bool first_configfile = true;
-	ifstream in(configfilename);
+    std::stringstream in(config_text);
 	if (!in) return false;
 	const char * settings_type = first_configfile?"primary":"additional";
 	first_configfile = false;
-	LOG_MSG("CONFIG:Loading %s settings from config file %s", settings_type,configfilename);
 
 	//Get directory from configfilename, used with relative paths.
-	current_config_dir=configfilename;
+	/*
+    current_config_dir=configfilename;
 	std::string::size_type pos = current_config_dir.rfind(CROSS_FILESPLIT);
 	if(pos == std::string::npos) pos = 0; //No directory then erase string
 	current_config_dir.erase(pos);
+    */
 
 	string gegevens;
 	Section* currentsection = NULL;
 	Section* testsec = NULL;
-	while (getline(in,gegevens)) {
-		
+	while (getline(in,gegevens))
+    {
 		/* strip leading/trailing whitespace */
 		trim(gegevens);
 		if(!gegevens.size()) continue;
 
-		switch(gegevens[0]){
+		switch(gegevens[0])
+        {
 		case '%':
 		case '\0':
 		case '#':
@@ -811,16 +797,18 @@ bool Config::ParseConfigFile(char const * const configfilename){
 		}
 			break;
 		default:
-			try {
+			try
+            {
 				if(currentsection) currentsection->HandleInputline(gegevens);
-			} catch(const char* message) {
+			}
+            catch(const char* message)
+            {
 				message=0;
 				//EXIT with message
 			}
 			break;
 		}
 	}
-	current_config_dir.clear();//So internal changes don't use the path information
 	return true;
 }
 

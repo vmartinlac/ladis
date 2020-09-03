@@ -155,7 +155,6 @@ add_library(
     src/dosbox/dosbox.cpp
     src/dosbox/gui/render_templates.h
     src/dosbox/gui/midi.cpp
-    src/dosbox/gui/sdl_gui.cpp
     src/dosbox/gui/render_templates_hq3x.h
     src/dosbox/gui/render.cpp
     src/dosbox/gui/dosbox_logo.h
@@ -235,12 +234,6 @@ add_library(
     src/dosbox/shell/shell_misc.cpp
     src/dosbox/shell/shell.cpp
     src/dosbox/shell/shell_batch.cpp
-    src/dosbox/debug/debug_win32.cpp
-    src/dosbox/debug/debug_gui.cpp
-    src/dosbox/debug/debug_disasm.cpp
-    src/dosbox/debug/debug.cpp
-    src/dosbox/debug/disasm_tables.h
-    src/dosbox/debug/debug_inc.h
     src/dosbox/dos/dos_tables.cpp
     src/dosbox/dos/dos_mscdex.cpp
     src/dosbox/dos/drives.h

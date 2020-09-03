@@ -39,8 +39,8 @@ protected:
 
 int main(int num_args, char** args)
 {
-    const QString root_directory = "/home/victor/developpement/ladis/build/instancexx";
-    const int num_epochs = 100;
+    const QString root_directory = "/DATA/victor/developpement/ladis/data/";
+    const int num_epochs = 1;
     const double seed = 101;
     const double training_samples_ratio = 0.9;
 
@@ -74,12 +74,11 @@ int main(int num_args, char** args)
         double average_training_loss = 0.0;
         double average_testing_loss = 0.0;
 
-        for(size_t i : training)
+        for(const std::vector<ActionDataset::ExampleType>& examples : *training_dataloader)
         {
-            dataset.getExample(i, state_from, states_to, probabilities);
-
             optimizer.zero_grad();
 
+            /*
             torch::Tensor loss = torch::nn::functional::kl_div(
                 torch::unsqueeze(network.forward(state_from, states_to), 0),
                 torch::unsqueeze(network.makeTransitionProbabilityTable(probabilities), 0),
@@ -90,22 +89,23 @@ int main(int num_args, char** args)
             optimizer.step();
 
             average_training_loss += loss.item<float>();
+            */
         }
 
-        for(size_t i : testing)
+        for(const std::vector<ActionDataset::ExampleType>& examples : *testing_dataloader)
         {
-            dataset.getExample(i, state_from, states_to, probabilities);
-
+            /*
             torch::Tensor loss = torch::nn::functional::kl_div(
                 torch::unsqueeze(network.forward(state_from, states_to), 0),
                 torch::unsqueeze(network.makeTransitionProbabilityTable(probabilities), 0),
                 torch::nn::KLDivLossOptions(torch::kBatchMean));
 
             average_testing_loss += loss.item<float>();
+            */
         }
 
-        average_training_loss /= double(training.size());
-        average_testing_loss /= double(testing.size());
+        average_training_loss /= double(*training_dataset.size());
+        average_testing_loss /= double(*testing_dataset.size());
 
         std::cout << epoch << ' ' << average_training_loss << ' ' << average_testing_loss << std::endl;
     }
