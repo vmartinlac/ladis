@@ -32,8 +32,8 @@ protected:
     int myTransmitter;
     int mySlavePid;
 
-    static constexpr int MAX_WIDTH = 640;
-    static constexpr int MAX_HEIGHT = 480;
+    static constexpr int MAX_WIDTH = 800;
+    static constexpr int MAX_HEIGHT = 600;
 
     void* mySharedMemory;
 };

@@ -1,6 +1,6 @@
 
 add_library(
-    emulator
+    ladis_emulator
     SHARED
 
     src/interface/Emulator.cpp
@@ -265,11 +265,11 @@ add_library(
     src/dosbox/dos/cdrom_ioctl_win32.cpp
 )
 
-target_link_libraries(emulator PUBLIC opencv_core)
-target_link_libraries(emulator PRIVATE Threads::Threads)
+target_link_libraries(ladis_emulator PUBLIC opencv_core)
+target_link_libraries(ladis_emulator PRIVATE Threads::Threads)
 
-target_include_directories(emulator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/public")
-target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl")
-target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/interface")
-target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/dosbox")
+target_include_directories(ladis_emulator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/public")
+target_include_directories(ladis_emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl")
+target_include_directories(ladis_emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/interface")
+target_include_directories(ladis_emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/dosbox")
 

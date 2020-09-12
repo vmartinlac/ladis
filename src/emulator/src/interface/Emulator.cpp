@@ -111,6 +111,12 @@ void Emulator::slaveLoop()
                     rows = emulator_screen.rows;
                     cols = emulator_screen.cols;
 
+                    if(cols > MAX_WIDTH || rows > MAX_HEIGHT)
+                    {
+                        std::cerr << "Screen too large for buffer!" << std::endl;
+                        abort();
+                    }
+
                     memcpy(mySharedMemory, emulator_screen.ptr(), 4*rows*cols);
                 }
 
