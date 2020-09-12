@@ -23,15 +23,15 @@
 #ifndef _SDL_keysym_h
 #define _SDL_keysym_h
 
-#include "LADIS_keys.h"
 
 /** What we really want is a mapping of every raw key on the keyboard.
  *  To support international keyboards, we use the range 0xA1 - 0xFF
  *  as international virtual keycodes.  We'll follow in the footsteps of X11...
  *  @brief The names of the keys
  */
-/*
-typedef enum {
+//
+typedef enum
+{
 	SDLK_UNKNOWN		= 0,
 	SDLK_FIRST		= 0,
 	SDLK_BACKSPACE		= 8,
@@ -267,8 +267,9 @@ typedef enum {
 	SDLK_UNDO		= 322,
 	SDLK_LAST
 } SDLKey;
-*/
+//
 
+/*
 typedef enum {
 	SDLK_UNKNOWN = LADIS_KEY_UNKNOWN,
 	SDLK_FIRST = LADIS_KEY_FIRST,
@@ -505,6 +506,7 @@ typedef enum {
 	SDLK_UNDO = LADIS_KEY_UNDO,
 	SDLK_LAST = LADIS_KEY_LAST,
 } SDLKey;
+*/
 
 /** Enumeration of valid key mods (possibly OR'd together) */
 typedef enum {

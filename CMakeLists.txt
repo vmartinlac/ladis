@@ -15,5 +15,5 @@ find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc)
 find_package(Threads REQUIRED)
 find_package(Torch REQUIRED)
 
-add_subdirectory(modules)
+add_subdirectory(src)
 

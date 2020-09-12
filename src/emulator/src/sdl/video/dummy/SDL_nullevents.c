@@ -31,27 +31,27 @@
 #include "SDL_nullvideo.h"
 #include "SDL_nullevents_c.h"
 
-#include "LADIS_glue.h"
+#include "EmulatorInternals.h"
 
 void DUMMY_PumpEvents(_THIS)
 {
-	struct LADIS_Event event;
+	struct EmulatorEvent event;
 
-    while( LADIS_read_event(&event), event.type != LADIS_EVENT_NONE )
+    while( emulator_read_event(&event), event.type != EMULATOR_EVENT_NONE )
     {
-        if( event.type == LADIS_EVENT_MOUSE_MOVED )
+        if( event.type == EMULATOR_EVENT_MOUSE_MOVED )
         {
             SDL_PrivateMouseMotion(0, 1, event.dx, event.dy);
         }
-        else if( event.type == LADIS_EVENT_MOUSE_BUTTON_DOWN )
+        else if( event.type == EMULATOR_EVENT_MOUSE_BUTTON_DOWN )
         {
             SDL_PrivateMouseButton(SDL_PRESSED, event.button, 0, 0);
         }
-        else if( event.type == LADIS_EVENT_MOUSE_BUTTON_UP )
+        else if( event.type == EMULATOR_EVENT_MOUSE_BUTTON_UP )
         {
             SDL_PrivateMouseButton(SDL_RELEASED, event.button, 0, 0);
         }
-        else if( event.type == LADIS_EVENT_KEY_UP )
+        else if( event.type == EMULATOR_EVENT_KEY_UP )
         {
             SDL_keysym keysym;
 
@@ -61,7 +61,7 @@ void DUMMY_PumpEvents(_THIS)
 
             SDL_PrivateKeyboard(SDL_RELEASED, &keysym);
         }
-        else if( event.type == LADIS_EVENT_KEY_DOWN )
+        else if( event.type == EMULATOR_EVENT_KEY_DOWN )
         {
             SDL_keysym keysym;
 
@@ -71,7 +71,7 @@ void DUMMY_PumpEvents(_THIS)
 
             SDL_PrivateKeyboard(SDL_PRESSED, &keysym);
         }
-        else if( event.type == LADIS_EVENT_QUIT )
+        else if( event.type == EMULATOR_EVENT_QUIT )
         {
             SDL_PrivateQuit();
         }

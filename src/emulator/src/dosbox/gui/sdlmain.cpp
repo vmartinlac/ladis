@@ -1409,8 +1409,10 @@ static void show_warning(char const * const message) {
    
 
 //extern void UI_Init(void);
-int DOSBOX_main(const char* config_string)
+int DOSBOX_main()
 {
+    //const char* config_string = "";
+
 	try {
 		CommandLine com_line(0, NULL);
 		Config myconf(&com_line);
@@ -1441,7 +1443,7 @@ int DOSBOX_main(const char* config_string)
 
 	sdl.num_joysticks=SDL_NumJoysticks();
 
-    control->ParseConfig(config_string);
+    //control->ParseConfig(config_string);
 
 		control->Init();
 		Section_prop * sdl_sec=static_cast<Section_prop *>(control->GetSection("sdl"));

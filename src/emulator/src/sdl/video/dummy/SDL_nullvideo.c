@@ -46,7 +46,7 @@
 #include "SDL_nullevents_c.h"
 #include "SDL_nullmouse_c.h"
 
-#include "LADIS_glue.h"
+#include "EmulatorInternals.h"
 
 #define DUMMYVID_DRIVER_NAME "dummy"
 
@@ -217,7 +217,7 @@ static void DUMMY_UnlockHWSurface(_THIS, SDL_Surface *surface)
 
 static void DUMMY_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 {
-    LADIS_update_image(this->hidden->w, this->hidden->h, this->hidden->buffer);
+    emulator_update_image(this->hidden->w, this->hidden->h, this->hidden->buffer);
 	/* do nothing. */
 }
 

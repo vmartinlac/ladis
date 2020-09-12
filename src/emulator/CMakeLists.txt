@@ -1,9 +1,9 @@
 
 add_library(
-    LADIS_simulator
+    emulator
     SHARED
 
-    src/ladis/core.cpp
+    src/interface/Emulator.cpp
 
     src/sdl/file/SDL_rwops.c
     src/sdl/audio/SDL_audiocvt.c
@@ -56,8 +56,6 @@ add_library(
     src/sdl/cdrom/linux/SDL_syscdrom.c
     src/sdl/cdrom/dummy/SDL_syscdrom.c
     src/sdl/cdrom/SDL_cdrom.c
-    src/sdl/loadso/dummy/SDL_sysloadso.c
-    src/sdl/loadso/dlopen/SDL_sysloadso.c
     src/sdl/joystick/linux/SDL_sysjoystick.c
     src/sdl/joystick/dummy/SDL_sysjoystick.c
     src/sdl/joystick/SDL_joystick.c
@@ -267,11 +265,11 @@ add_library(
     src/dosbox/dos/cdrom_ioctl_win32.cpp
 )
 
-target_link_libraries(LADIS_simulator PUBLIC opencv_core)
-target_link_libraries(LADIS_simulator PRIVATE Threads::Threads opencv_highgui)
+target_link_libraries(emulator PUBLIC opencv_core)
+target_link_libraries(emulator PRIVATE Threads::Threads)
 
-target_include_directories(LADIS_simulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl")
-target_include_directories(LADIS_simulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/dosbox")
-target_include_directories(LADIS_simulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/ladis")
-target_include_directories(LADIS_simulator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/public")
+target_include_directories(emulator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/public")
+target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl")
+target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/interface")
+target_include_directories(emulator PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/dosbox")
 
