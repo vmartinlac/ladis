@@ -25,12 +25,127 @@ Controller::Controller()
     myCharToKey['-'] = std::make_tuple(EMULATOR_KEY_KP_MINUS, false);
     myCharToKey['*'] = std::make_tuple(EMULATOR_KEY_KP_MULTIPLY, false);
     myCharToKey['/'] = std::make_tuple(EMULATOR_KEY_KP_DIVIDE, false);
+
+    myFont[27975301350782819] = "M";
+    myFont[17560727076430654] = "O";
+    myFont[8782226240254751] = "D";
+    myFont[35750634519200639] = "E";
+    myFont[0] = " ";
+    myFont[3390893860850688] = ":";
+    myFont[17560727025901688] = "J";
+    myFont[17560727076430691] = "U";
+    myFont[3390945601784895] = "T";
+    myFont[35575241497247744] = "a";
+    myFont[232893482304208896] = "p";
+    myFont[35469692726280192] = "e";
+    myFont[1695472942448640] = "r";
+    myFont[847737407079295] = "F";
+    myFont[17746169414028812] = "1";
+    myFont[17560727073980416] = "o";
+    myFont[35575125585887232] = "u";
+    myFont[16914990365153308] = "l";
+    myFont[27975336041054208] = "m";
+    myFont[31089118146355296] = "d";
+    myFont[16720700190425859] = "b";
+    myFont[8447819276746759] = "è";
+    myFont[8500531025687326] = "3";
+    myFont[27925517493796864] = "x";
+    myFont[35469160150335488] = "c";
+    myFont[16914990365409304] = "i";
+    myFont[17838742991405056] = "s";
+    myFont[27975421473797660] = "A";
+    myFont[17789024868512542] = "2";
+    myFont[17560727076430654] = "0";
+    myFont[6768619451452440] = "(";
+    myFont[1087645801772744728] = "j";
+    myFont[27975301212340224] = "n";
+    myFont[1702147483241478] = ")";
+    myFont[17560313148957502] = "C";
+    myFont[27975370337642339] = "N";
+    myFont[27975301212340995] = "h";
+    myFont[4494713869985251328] = "g";
+    myFont[27975300610745151] = "R";
+    myFont[8500427675284254] = "S";
+    myFont[847737413395263] = "P";
+    myFont[17842201449161535] = "B";
+    myFont[473314844] = "°";
+    myFont[7941099844993024] = "v";
+    myFont[35522189253804039] = "à";
+    myFont[8500531360105279] = "5";
+    myFont[8457495182576670] = "I";
+    myFont[7941099845018467] = "V";
 }
 
-void Controller::run(Emulator* emulator, Agent* agent)
+std::string Controller::extractString(const cv::Mat4b& image, const cv::Vec4b& foreground, const cv::Vec4b& background)
+{
+    bool ok = true;
+    std::string ret;
+
+    if(ok)
+    {
+        ok = image.rows == 8 && (image.cols % 8) == 0;
+    }
+
+    if(ok)
+    {
+        const int N = image.cols / 8;
+
+        for(int n=0; ok && n<N; n++)
+        {
+            cv::Mat4b ROI = image(cv::Rect(8*n, 0, 8, 8));
+
+            uint64_t compiled = 0;
+            int index = 0;
+
+            for(int i=0; ok && i<8; i++)
+            {
+                for(int j=0; ok && j<8; j++)
+                {
+                    const cv::Vec4b& pixel = ROI(i,j);
+
+                    if(pixel == foreground)
+                    {
+                        compiled |= (uint64_t(1) << index);
+                    }
+                    else if(pixel != background)
+                    {
+                        ok = false;
+                    }
+
+                    index++;
+                }
+            }
+
+            if(ok)
+            {
+                std::map<uint64_t, std::string>::iterator it = myFont.find(compiled);
+
+                if(it == myFont.end())
+                {
+                    ok = false;
+                }
+                else
+                {
+                    ret += it->second;
+                }
+            }
+        }
+    }
+
+    if(!ok)
+    {
+        ret = "";
+    }
+
+    return ret;
+}
+
+void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, int difficulty)
 {
     myEmulator = emulator;
     myAgent = agent;
+    myAgentPlaysFirst = agent_plays_first;
+    myDifficulty = difficulty;
 
     cv::Mat4b screen;
     int result = Agent::RESULT_ERROR;
@@ -58,11 +173,23 @@ void Controller::run(Emulator* emulator, Agent* agent)
     {
         typeText("\n");
 
-        go_on = waitForMainScreen();
+        go_on = waitForMenu();
+    }
+
+    if(go_on)
+    {
+        go_on = processMenu();
     }
 
     emulator->stop();
     agent->endMatch(result);
+}
+
+bool Controller::processMenu()
+{
+    // TODO
+
+    return false;
 }
 
 bool Controller::waitFirstFrame(cv::Mat4b& screen)
@@ -122,17 +249,32 @@ bool Controller::waitForIntroScreen()
     return ret;
 }
 
-bool Controller::waitForMainScreen()
+bool Controller::waitForMenu()
 {
+    const ClockType::time_point t0 = ClockType::now();
     cv::Mat4b screen;
+    bool go_on = true;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    myEmulator->readScreen(screen);
-    cv::imwrite("hello.png", screen);
+    while(go_on && std::chrono::duration_cast<std::chrono::milliseconds>(ClockType::now() - t0).count() < 2000 )
+    {
+        myEmulator->readScreen(screen);
 
-    // TODO
+        const bool b0 = extractString(screen(cv::Rect(442, 20, 48, 8))) == "NIVEAU";
+        const bool b1 = extractString(screen(cv::Rect(442, 143, 32, 8))) == "M0DE";
+        const bool b2 = extractString(screen(cv::Rect(442, 369, 128, 8))) == "ENTREE 0U ESPACE";
+        const bool b3 = extractString(screen(cv::Rect(442, 389, 96, 8))) == "P0UR DEBUTER";
 
-    return false;
+        if(b0 && b1 && b2 && b3)
+        {
+            go_on = false;
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+    }
+
+    return !go_on;
 }
 
 void Controller::typeText(const char* text)
@@ -194,3 +336,4 @@ void Controller::typeText(const char* text)
         }
     }
 }
+

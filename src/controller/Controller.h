@@ -13,15 +13,28 @@ public:
 
     Controller();
 
-    void run(Emulator* emulator, Agent* agent);
+    void run(Emulator* emulator, Agent* agent, bool agent_plays_first, int difficulty);
 
 protected:
 
-    bool waitFirstFrame(cv::Mat4b& screen);
+    bool waitFirstFrame(
+        cv::Mat4b& screen);
+
     bool waitForIntroScreen();
-    bool waitForMainScreen();
+
+    bool waitForMenu();
+
+    bool processMenu();
+
     bool checkIntroScreen();
-    void typeText(const char* text);
+
+    void typeText(
+        const char* text);
+
+    std::string extractString(
+        const cv::Mat4b& image,
+        const cv::Vec4b& foreground=cv::Vec4b(255,255,255,255),
+        const cv::Vec4b& background=cv::Vec4b(0,0,0,255));
 
 protected:
 
@@ -31,6 +44,9 @@ protected:
 
     Emulator* myEmulator;
     Agent* myAgent;
+    bool myAgentPlaysFirst;
+    int myDifficulty;
     std::map<char, std::tuple<int,bool> > myCharToKey;
+    std::map<uint64_t, std::string> myFont;
 };
 

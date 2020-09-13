@@ -27,7 +27,7 @@ int main(int num_args, char** args)
     MyAgent agent;
     Controller con;
 
-    con.run(&em, &agent);
+    con.run(&em, &agent, false, 0);
 
     return 0;
 }
