@@ -106,7 +106,13 @@ void Emulator::slaveLoop()
                 {
                     std::lock_guard<std::mutex> lock(emulator_screen_mutex);
 
-                    assert(emulator_screen.isContinuous());
+                    if( emulator_screen.size() != cv::Size(0,0) )
+                    {
+                        if(!emulator_screen.isContinuous())
+                        {
+                            emulator_screen = emulator_screen.clone();
+                        }
+                    }
 
                     rows = emulator_screen.rows;
                     cols = emulator_screen.cols;

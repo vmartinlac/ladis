@@ -17,8 +17,7 @@ public:
 
 protected:
 
-    bool waitFirstFrame(
-        cv::Mat4b& screen);
+    bool waitFirstFrame();
 
     bool waitForIntroScreen();
 
@@ -30,6 +29,9 @@ protected:
 
     void typeText(
         const char* text);
+
+    void typeKeys(
+        std::initializer_list<int> keys);
 
     std::string extractString(
         const cv::Mat4b& image,

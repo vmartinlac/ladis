@@ -74,6 +74,8 @@ Controller::Controller()
     myFont[8500531360105279] = "5";
     myFont[8457495182576670] = "I";
     myFont[7941099845018467] = "V";
+    myFont[35750646549852287] = "Z";
+    myFont[33830320083450936] = "4";
 }
 
 std::string Controller::extractString(const cv::Mat4b& image, const cv::Vec4b& foreground, const cv::Vec4b& background)
@@ -147,7 +149,12 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
     myAgentPlaysFirst = agent_plays_first;
     myDifficulty = difficulty;
 
-    cv::Mat4b screen;
+    if(difficulty < 0 || difficulty > 5)
+    {
+        std::cerr << "Incorrect value for difficulty!" << std::endl;
+        abort();
+    }
+
     int result = Agent::RESULT_ERROR;
     bool go_on = true;
 
@@ -156,7 +163,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     if(go_on)
     {
-        go_on = waitFirstFrame(screen);
+        go_on = waitFirstFrame();
     }
 
     if(go_on)
@@ -181,24 +188,123 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         go_on = processMenu();
     }
 
+    while(go_on)
+    {
+        cv::Mat4b screen;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        myEmulator->readScreen(screen);
+
+        if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
+        {
+            std::cout << "A l'agent de jouer!" << std::endl;
+            // TODO
+        }
+        else cv::imwrite("hello.png", screen);
+    }
+
     emulator->stop();
     agent->endMatch(result);
 }
 
 bool Controller::processMenu()
 {
-    // TODO
+    cv::Mat4b screen;
+    bool go_on = true;
+    bool ret = false;
 
-    return false;
+    while(go_on)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        myEmulator->readScreen(screen);
+        cv::imwrite("hello.png", screen);
+
+        if(screen.size() != cv::Size(640, 480))
+        {
+            std::cout << "Incorrect image size!" << std::endl;
+            go_on = false;
+            ret = false;
+        }
+        else
+        {
+            ret = true;
+
+            if(ret)
+            {
+                const std::string s2 = extractString(screen(cv::Rect(498, 143, 24, 8))); // game mode
+
+                if(s2 != "JEU")
+                {
+                    ret = false;
+                    //typeKeys({EMULATOR_KEY_F1});
+                    go_on = false;
+                    std::cout << "Not game mode!" << std::endl;
+                }
+            }
+
+            if(ret)
+            {
+                const std::string s0 = extractString(screen(cv::Rect(442, 266, 184, 8))); // first player
+
+                if(s0 == "DA2020 (jaune) C0MMENCE")
+                {
+                    if(myAgentPlaysFirst)
+                    {
+                        ret = false;
+                        typeKeys({EMULATOR_KEY_F2});
+                        std::cout << "Setting first player to agent." << std::endl;
+                    }
+                }
+                else if(s0 == "V0US (jaune) C0MMENCEZ ")
+                {
+                    if(!myAgentPlaysFirst)
+                    {
+                        ret = false;
+                        typeKeys({EMULATOR_KEY_F2});
+                        std::cout << "Setting first player to DA2020." << std::endl;
+                    }
+                }
+                else
+                {
+                    go_on = false;
+                    ret = false;
+                    std::cout << "Could not extract first player text from image." << std::endl;
+                }
+            }
+
+            if(ret)
+            {
+                const std::string s1 = extractString(screen(cv::Rect(528, 20, 8, 8))); // difficulty
+
+                if(s1 != std::to_string(myDifficulty))
+                {
+                    ret = false;
+                    typeKeys({EMULATOR_KEY_0 + myDifficulty});
+                    std::cout << "Setting difficulty to " << myDifficulty << "." << std::endl;
+                }
+            }
+
+            if(ret)
+            {
+                go_on = false;
+                typeKeys({EMULATOR_KEY_RETURN});
+                std::cout << "Ready to play" << std::endl;
+            }
+        }
+    }
+
+    return ret;
 }
 
-bool Controller::waitFirstFrame(cv::Mat4b& screen)
+bool Controller::waitFirstFrame()
 {
+    cv::Mat4b screen;
+
     const ClockType::time_point t0 = ClockType::now();
 
     myEmulator->readScreen(screen);
 
-    while( std::chrono::duration_cast<std::chrono::milliseconds>(ClockType::now() - t0).count() < 1000 && screen.size() == cv::Size(0,0))
+    while( std::chrono::duration_cast<std::chrono::milliseconds>(ClockType::now() - t0).count() < 1000 && screen.size() == cv::Size(0,0) )
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         myEmulator->readScreen(screen);
@@ -275,6 +381,28 @@ bool Controller::waitForMenu()
     }
 
     return !go_on;
+}
+
+void Controller::typeKeys(std::initializer_list<int> keys)
+{
+    const int delay = 10;
+
+    for(int key : keys)
+    {
+        myEmulator->sendKeyDown(key);
+
+        if(delay > 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        }
+
+        myEmulator->sendKeyUp(key);
+
+        if(delay > 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        }
+    }
 }
 
 void Controller::typeText(const char* text)

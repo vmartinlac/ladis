@@ -18,6 +18,9 @@ content['j.png'] = "choisi pour changer"
 content['k.png'] = "(0 à 5)"
 content['l.png'] = "NIVEAU :"
 content['m.png'] = "2"
+content['n.png'] = "VOUS (jaune) COMMENCEZ"
+content['o.png'] = "4"
+content['p.png'] = "A VOUS DE JOUER"
 
 letters = dict()
 
