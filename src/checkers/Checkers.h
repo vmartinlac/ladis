@@ -8,13 +8,14 @@
 #include <algorithm>
 #include <stdexcept>
 #include "Minimax.h"
+#include "CheckersBase.h"
 
-class Checkers
+class Checkers : public CheckersBase
 {
 public:
 
-    static constexpr int SIDE = 10;
-    static constexpr int N = (SIDE*SIDE)/2;
+    //static constexpr int SIDE = 10;
+    //static constexpr int N = (SIDE*SIDE)/2;
 
     static int flatIndexToGridIndex(int i);
     static int gridIndexToFlatIndex(int i);

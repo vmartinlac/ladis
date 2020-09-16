@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <opencv2/imgcodecs.hpp>
+#include "CheckersBase.h"
 #include "Controller.h"
 
 Controller::Controller()
@@ -76,6 +77,9 @@ Controller::Controller()
     myFont[7941099845018467] = "V";
     myFont[35750646549852287] = "Z";
     myFont[33830320083450936] = "4";
+    myFont[35750633512567555] = "L";
+    myFont[27975301684487011] = "H";
+    myFont[3390893860061184] = ".";
 }
 
 std::string Controller::extractString(const cv::Mat4b& image, const cv::Vec4b& foreground, const cv::Vec4b& background)
@@ -155,8 +159,15 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         abort();
     }
 
-    int result = Agent::RESULT_ERROR;
+    int result = Agent::RESULT_CONTROLLER_ERROR;
     bool go_on = true;
+
+    int mode = MODE_WAIT_MY_TURN;
+    bool need_new_screen = true;
+    Agent::State current_state;
+    Agent::Action current_action;
+    int trajectory_index = -1;
+    cv::Mat4b screen;
 
     agent->beginMatch();
     emulator->start();
@@ -190,21 +201,158 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     while(go_on)
     {
-        cv::Mat4b screen;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        myEmulator->readScreen(screen);
-
-        if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
+        std::cout << "LOOP" << std::endl;
+        if(need_new_screen)
         {
-            std::cout << "A l'agent de jouer!" << std::endl;
-            // TODO
+            std::this_thread::sleep_for(std::chrono::milliseconds(6000));
+            myEmulator->readScreen(screen);
+
+            //
+            {
+                static int image_id = 0;
+                std::stringstream filename;
+                filename << "screen_" << image_id << ".png";
+                cv::imwrite(filename.str(), screen);
+                image_id++;
+            }
+            //
         }
-        else cv::imwrite("hello.png", screen);
+
+        need_new_screen = true;
+
+        if(mode == MODE_WAIT_MY_TURN)
+        {
+            std::cout << "MODE_WAIT_MY_TURN" << std::endl;
+            if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
+            {
+            }
+            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            {
+            }
+            else if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
+            {
+                extractGrid(screen, current_state);
+
+                const bool agent_ok = myAgent->play(current_state, current_action);
+
+                if(agent_ok)
+                {
+                    if(current_action.trajectory.size() < 2)
+                    {
+                        go_on = false;
+                        result = Agent::RESULT_AGENT_ILLEGAL_MOVE;
+                    }
+                    else
+                    {
+                        trajectory_index = 0;
+                        mode = MODE_TYPE_TRAJECTORY;
+                        need_new_screen = false;
+                    }
+                }
+                else
+                {
+                    go_on = false;
+                    result = Agent::RESULT_AGENT_GAVE_UP;
+                }
+            }
+        }
+        else if(mode == MODE_TYPE_TRAJECTORY)
+        {
+            std::cout << "MODE_TYPE_TRAJECTORY" << std::endl;
+            if( extractString(screen(cv::Rect(0, 430, 104, 8))) == "C0UP INTERDIT" )
+            {
+                go_on = false;
+                result = Agent::RESULT_AGENT_ILLEGAL_MOVE;
+            }
+            else if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
+            {
+                mode = MODE_WAIT_MY_TURN;
+            }
+            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            {
+                mode = MODE_WAIT_MY_TURN;
+            }
+            else if( trajectory_index >= current_action.trajectory.size() )
+            {
+                go_on = false;
+                result = Agent::RESULT_CONTROLLER_ERROR;
+            }
+            else
+            {
+                Agent::State this_state;
+                extractGrid(screen, this_state);
+
+                if(std::equal(this_state.checkerboard, this_state.checkerboard+CheckersBase::N, current_state.checkerboard))
+                {
+                    std::stringstream text;
+
+                    const int cell = current_action.trajectory[trajectory_index];
+
+                    trajectory_index++;
+
+                    if(myAgentPlaysFirst)
+                    {
+                        text << (CheckersBase::N-cell) << '\n';
+                    }
+                    else
+                    {
+                        text << (cell+1) << '\n';
+                    }
+
+                    typeText(text.str().c_str());
+
+                    if( trajectory_index >= current_action.trajectory.size() )
+                    {
+                        mode = MODE_WAIT_MY_TURN;
+                    }
+                }
+                else
+                {
+                    mode = MODE_WAIT_MY_TURN;
+                    need_new_screen = false;
+                }
+            }
+        }
+
+        std::cout << std::endl;
     }
 
     emulator->stop();
     agent->endMatch(result);
+}
+
+void Controller::extractGrid(const cv::Mat4b& screen, Agent::State& grid)
+{
+    for(int i=0; i<CheckersBase::N; i++)
+    {
+        cv::Mat4b ROI;
+        extractCell(screen, i, ROI);
+
+        cv::Vec6f features;
+        computeFeatures(ROI, features);
+
+        grid.checkerboard[i] = predictCell(features);
+    }
+}
+
+void Controller::extractCell(const cv::Mat4b& screen, int no, cv::Mat4b& cell)
+{
+    const cv::Rect checkerboard(0, 0, 441, 411);
+    constexpr int border = 1;
+    constexpr int SIDE = CheckersBase::SIDE;
+    constexpr int N = CheckersBase::N;
+
+    const int i = no;
+    const int y = SIDE-1-(2*i+1)/SIDE;
+    const int x = SIDE-1-2*(i%(SIDE/2)) - (y%2);
+
+    const cv::Rect ROI(
+        checkerboard.x + border + x*(checkerboard.width-border)/SIDE,
+        checkerboard.y + border + y*(checkerboard.height-border)/SIDE,
+        (checkerboard.width-border)/SIDE-border,
+        (checkerboard.height-border)/SIDE-border);
+
+    cell = screen(ROI);
 }
 
 bool Controller::processMenu()
@@ -465,3 +613,69 @@ void Controller::typeText(const char* text)
     }
 }
 
+void Controller::computeFeatures(const cv::Mat4b& picture, cv::Vec6f& features)
+{
+    const int margin = 4;
+
+    const cv::Mat4b ROI = picture(cv::Rect(margin, margin, picture.cols-2*margin, picture.rows-2*margin));
+
+    std::fill(features.val, features.val+6, 0.0f);
+
+    for(int i=0; i<ROI.rows; i++)
+    {
+        for(int j=0; j<ROI.cols; j++)
+        {
+            const cv::Vec4b& pix = ROI(i,j);
+
+            const float fi = float(i) / float(ROI.rows-1);
+            const float fj = float(j) / float(ROI.cols-1);
+
+            features[0] += pix[0] * fi;
+            features[1] += pix[0] * fj;
+            features[2] += pix[1] * fi;
+            features[3] += pix[1] * fj;
+            features[4] += pix[2] * fi;
+            features[5] += pix[2] * fj;
+        }
+    }
+
+    features /= (255.0 * ROI.rows*ROI.cols);
+}
+
+char Controller::predictCell(const cv::Vec6f& features)
+{
+    const char* values = (myAgentPlaysFirst) ? ".oOpP" : ".pPoO";
+
+    /*
+    empty [[ 4.44089210e-16 -1.11022302e-16  6.66133815e-16 -6.66133815e-16 -8.88178420e-16  4.44089210e-16]
+    homme joueur [ 1.44226667e+00  1.34842778e+00  5.83527000e-01  6.65310000e-01 3.18606667e+00  3.48021222e+00]
+    dame joueur [ 1.36443750e+00  1.50949500e+00  6.64148000e-01  8.31589000e-01 4.92916500e+00  5.33817500e+00]
+    homme adversaire [ 1.30302600e+00  1.40953400e+00  3.90906800e+00  4.22860400e+00 3.90906800e+00  4.22860400e+00]
+    dame adversaire [ 1.93052500e+00  2.21705500e+00  5.79157500e+00  6.65116000e+00 5.79157500e+00  6.65116000e+00]
+    */
+
+    static const float reference_features[6*5] =
+    {
+        0.00000000e+00, 1.73472348e-17, 6.93889390e-18, 0.00000000e+00, -2.77555756e-17, -2.77555756e-17, // empty
+        0.05926673, 0.04979867, 0.0228783, 0.0245536, 0.12645144, 0.12858,  // dame adverse
+        0.0543731, 0.05275735, 0.0257872, 0.0277048, 0.19730725, 0.1882615, // homme adverse
+        0.0518549, 0.05209036, 0.1555648, 0.156271,  0.1555648, 0.156271, // homme joueur
+        0.0760706, 0.0797269, 0.228212, 0.2391805, 0.228212, 0.2391805 // dame joueur
+    };
+
+    int k = 0;
+    double best_dist = cv::norm(cv::Vec6f(reference_features), features);
+
+    for(int i=1; i<5; i++)
+    {
+        const double dist = cv::norm(cv::Vec6f(reference_features+6*i), features);
+
+        if(dist < best_dist)
+        {
+            best_dist = dist;
+            k = i;
+        }
+    }
+
+    return values[k];
+}

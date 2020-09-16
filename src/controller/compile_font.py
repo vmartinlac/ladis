@@ -21,6 +21,8 @@ content['m.png'] = "2"
 content['n.png'] = "VOUS (jaune) COMMENCEZ"
 content['o.png'] = "4"
 content['p.png'] = "A VOUS DE JOUER"
+content['q.png'] = "JE REFLECHIS..."
+content['r.png'] = "JE JOUE"
 
 letters = dict()
 
