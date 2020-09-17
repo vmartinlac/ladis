@@ -23,6 +23,8 @@ content['o.png'] = "4"
 content['p.png'] = "A VOUS DE JOUER"
 content['q.png'] = "JE REFLECHIS..."
 content['r.png'] = "JE JOUE"
+content['s.png'] = "VOUS AVEZ PERDU !";
+content['t.png'] = "VOUS AVEZ GAGNE !";
 
 letters = dict()
 

@@ -148,6 +148,14 @@ public:
         std::vector<AvailableAction> myAvailableActions;
     };
 
+    static void enumerateActions(
+        const State& state,
+        std::vector< std::tuple<Action,State> >& action_states);
+
+    static void enumerateActions(
+        const State& state,
+        std::vector<Action>& actions);
+
     using Solver = Minimax<State, UtilityFunction, Action, ActionIterator>;
 
 public:

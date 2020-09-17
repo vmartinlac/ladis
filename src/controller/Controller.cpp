@@ -80,6 +80,8 @@ Controller::Controller()
     myFont[35750633512567555] = "L";
     myFont[27975301684487011] = "H";
     myFont[3390893860061184] = ".";
+    myFont[3377751463435788] = "!";
+    myFont[35575125848056638] = "G";
 }
 
 std::string Controller::extractString(const cv::Mat4b& image, const cv::Vec4b& foreground, const cv::Vec4b& background)
@@ -201,7 +203,6 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     while(go_on)
     {
-        std::cout << "LOOP" << std::endl;
         if(need_new_screen)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
@@ -222,8 +223,17 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
         if(mode == MODE_WAIT_MY_TURN)
         {
-            std::cout << "MODE_WAIT_MY_TURN" << std::endl;
-            if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
+            if( extractString(screen(cv::Rect(448, 219, 136, 8))) == "V0US AVEZ GAGNE !" )
+            {
+                go_on = false;
+                result = Agent::RESULT_AGENT_WON;
+            }
+            else if( extractString(screen(cv::Rect(448, 219, 136, 8))) == "V0US AVEZ PERDU !" )
+            {
+                go_on = false;
+                result = Agent::RESULT_AGENT_LOST;
+            }
+            else if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
             {
             }
             else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
@@ -258,8 +268,17 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         }
         else if(mode == MODE_TYPE_TRAJECTORY)
         {
-            std::cout << "MODE_TYPE_TRAJECTORY" << std::endl;
-            if( extractString(screen(cv::Rect(0, 430, 104, 8))) == "C0UP INTERDIT" )
+            if( extractString(screen(cv::Rect(448, 219, 136, 8))) == "V0US AVEZ GAGNE !" )
+            {
+                go_on = false;
+                result = Agent::RESULT_AGENT_WON;
+            }
+            else if( extractString(screen(cv::Rect(448, 219, 136, 8))) == "V0US AVEZ PERDU !" )
+            {
+                go_on = false;
+                result = Agent::RESULT_AGENT_LOST;
+            }
+            else if( extractString(screen(cv::Rect(0, 430, 104, 8))) == "C0UP INTERDIT" )
             {
                 go_on = false;
                 result = Agent::RESULT_AGENT_ILLEGAL_MOVE;
@@ -313,8 +332,6 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
                 }
             }
         }
-
-        std::cout << std::endl;
     }
 
     emulator->stop();
@@ -365,7 +382,6 @@ bool Controller::processMenu()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         myEmulator->readScreen(screen);
-        cv::imwrite("hello.png", screen);
 
         if(screen.size() != cv::Size(640, 480))
         {

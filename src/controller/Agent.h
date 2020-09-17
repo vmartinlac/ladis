@@ -30,6 +30,7 @@ public:
 
 public:
 
+    virtual std::string getName() = 0;
     virtual void beginMatch() = 0;
     virtual bool play(const State& state, Action& move) = 0;
     virtual void endMatch(int result) = 0;

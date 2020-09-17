@@ -257,6 +257,38 @@ void Checkers::Action::invert()
     }
 }
 
+void Checkers::enumerateActions(const State& state, std::vector< std::tuple<Action,State> >& action_states)
+{
+    action_states.clear();
+
+    ActionIterator it;
+    it.init(state);
+
+    Action action;
+    State new_state;
+
+    while(it.next(state, action, new_state))
+    {
+        action_states.emplace_back(action, new_state);
+    }
+}
+
+void Checkers::enumerateActions(const State& state, std::vector<Action>& actions)
+{
+    actions.clear();
+
+    ActionIterator it;
+    it.init(state);
+
+    Action action;
+    State new_state;
+
+    while(it.next(state, action, new_state))
+    {
+        actions.emplace_back(action);
+    }
+}
+
 void Checkers::ActionIterator::init(const State& s)
 {
     State state = s;
