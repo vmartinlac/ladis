@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <ctime>
 #include <vector>
 #include "Checkers.h"
 
@@ -18,7 +19,7 @@ public:
 
     struct Match
     {
-        std::string start_datetime;
+        time_t start_timestamp;
         bool agent_plays_first;
         int difficulty;
         int result;

@@ -14,6 +14,6 @@ namespace Utils
         rng.seed(s);
     }
 
-    std::string getCurrentDateTime();
+    std::string makeUTCISO8601DateTime(time_t t);
 };
 

@@ -44,7 +44,7 @@ void play_match(int match_id)
     SaverAgent saver_agent(&db, &agent);
     Controller con;
 
-    con.run(&em, &saver_agent, false, 0);
+    con.run(&em, &saver_agent, true, 0);
 
     mysql_library_end();
 }

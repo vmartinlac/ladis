@@ -18,6 +18,7 @@ find_package(Threads REQUIRED)
 
 #pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
 pkg_check_modules(MARIADB REQUIRED IMPORTED_TARGET mariadb)
+pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
 
 add_subdirectory(src)
 

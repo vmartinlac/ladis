@@ -185,8 +185,11 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         std::default_random_engine RNG;
         Utils::seedRNG(RNG);
 
-        const double mean_time = 15.0;
-        std::exponential_distribution<double> X(1.0/mean_time);
+        //const double mean_time = 15.0;
+        //std::exponential_distribution<double> X(1.0/mean_time);
+
+        const double max_time = 45.0;
+        std::uniform_real_distribution<double> X(0.0, max_time);
 
         const double actual_time = X(RNG);
 
