@@ -7,95 +7,12 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "Emulator.h"
-#include "Controller.h"
-#include "Checkers.h"
-#include "Database.h"
-
-class CheckersAgent : public Agent
-{
-public:
-
-    std::string getName() override
-    {
-        return "minimax";
-    }
-
-    void beginMatch() override
-    {
-    }
-
-    virtual bool play(const Checkers::State& state, Checkers::Action& action) = 0;
-
-    bool play(const State& state_, Action& action_) override
-    {
-        Checkers::State state;
-        Checkers::Action action;
-
-        state.setMyTurn(true);
-        state.setFlatGrid(state_.checkerboard);
-
-        const bool ok = play(state, action);
-
-        if(ok)
-        {
-            action_.trajectory.resize(action.getNumMoves()+1);
-
-            for(int i=0; i<=action.getNumMoves(); i++)
-            {
-                action_.trajectory[i] = action.getTrajectory(i);
-            }
-        }
-
-        return ok;
-    }
-
-    void endMatch(int result) override
-    {
-        std::ofstream log("result.txt");
-        log << result << std::endl;
-    }
-};
-
-class UniformAgent : public CheckersAgent
-{
-public:
-
-    bool play(const Checkers::State& state, Checkers::Action& action) override
-    {
-        bool ret = false;
-
-        std::vector<Checkers::Action> actions;
-
-        Checkers::enumerateActions(state, actions);
-
-        if(!actions.empty())
-        {
-            action = actions[myRNG() % actions.size()];
-            ret = true;
-        }
-
-        return ret;
-    }
-
-protected:
-
-    std::default_random_engine myRNG;
-};
-
-class MinimaxAgent : public CheckersAgent
-{
-public:
-
-    bool play(const Checkers::State& state, Checkers::Action& action) override
-    {
-        Checkers::Solver solver;
-        Checkers::State new_state;
-        Checkers::UtilityFunction utility;
-
-        return solver.solve(state, action, new_state, utility, 4);
-    }
-};
+#include <Controller.h>
+#include <Checkers.h>
+#include <MySQLDatabase.h>
+#include <Emulator.h>
+#include <SaverAgent.h>
+#include <UniformAgent.h>
 
 void play_match(int match_id)
 {
@@ -115,12 +32,21 @@ void play_match(int match_id)
         exit(1);
     }
 
-    Database db("database.sqlite");
+    if(mysql_library_init(0, nullptr, nullptr))
+    {
+        std::cout << "Could not initialize mysqlclient library!" << std::endl;
+        exit(1);
+    }
+
+    MySQLDatabase db;
     Emulator em;
     UniformAgent agent;
+    SaverAgent saver_agent(&db, &agent);
     Controller con;
 
-    con.run(&em, &agent, false, 0);
+    con.run(&em, &saver_agent, false, 0);
+
+    mysql_library_end();
 }
 
 int main(int num_args, char** args)
@@ -138,6 +64,16 @@ int main(int num_args, char** args)
     {
         std::cerr << "Bad input values" << std::endl;
         exit(1);
+    }
+
+    using RNG = std::default_random_engine;
+    RNG rng;
+
+    {
+        std::ifstream f("/dev/urandom", std::ifstream::binary);
+        RNG::result_type s;
+        f.read(reinterpret_cast<char*>(&s), sizeof(RNG::result_type));
+        rng.seed(s);
     }
 
     int running = 0;

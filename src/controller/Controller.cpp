@@ -1,8 +1,9 @@
 #include <iostream>
 #include <thread>
 #include <opencv2/imgcodecs.hpp>
-#include "CheckersBase.h"
+#include "Checkers.h"
 #include "Controller.h"
+#include "Utils.h"
 
 Controller::Controller()
 {
@@ -166,17 +167,32 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     int mode = MODE_WAIT_MY_TURN;
     bool need_new_screen = true;
-    Agent::State current_state;
-    Agent::Action current_action;
+    Checkers::Grid current_grid;
+    Checkers::Action current_action;
     int trajectory_index = -1;
     cv::Mat4b screen;
 
-    agent->beginMatch();
+    agent->beginMatch(myAgentPlaysFirst, myDifficulty);
     emulator->start();
 
     if(go_on)
     {
         go_on = waitFirstFrame();
+    }
+
+    if(go_on)
+    {
+        std::default_random_engine RNG;
+        Utils::seedRNG(RNG);
+
+        const double mean_time = 15.0;
+        std::exponential_distribution<double> X(1.0/mean_time);
+
+        const double actual_time = X(RNG);
+
+        std::cout << "Sleeping for " << actual_time << " seconds before starting playing." << std::endl;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(actual_time * 1.0e3)));
     }
 
     if(go_on)
@@ -241,13 +257,17 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             }
             else if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
             {
-                extractGrid(screen, current_state);
+                extractGrid(screen, current_grid);
+
+                Checkers::State current_state;
+                current_state.setGrid(current_grid);
+                current_state.setMyTurn(true);
 
                 const bool agent_ok = myAgent->play(current_state, current_action);
 
                 if(agent_ok)
                 {
-                    if(current_action.trajectory.size() < 2)
+                    if(current_action.getNumMoves() < 1)
                     {
                         go_on = false;
                         result = Agent::RESULT_AGENT_ILLEGAL_MOVE;
@@ -291,27 +311,27 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             {
                 mode = MODE_WAIT_MY_TURN;
             }
-            else if( trajectory_index >= current_action.trajectory.size() )
+            else if( trajectory_index >= current_action.getNumCells() )
             {
                 go_on = false;
                 result = Agent::RESULT_CONTROLLER_ERROR;
             }
             else
             {
-                Agent::State this_state;
-                extractGrid(screen, this_state);
+                Checkers::Grid this_grid;
+                extractGrid(screen, this_grid);
 
-                if(std::equal(this_state.checkerboard, this_state.checkerboard+CheckersBase::N, current_state.checkerboard))
+                if(current_grid == this_grid)
                 {
                     std::stringstream text;
 
-                    const int cell = current_action.trajectory[trajectory_index];
+                    const int cell = current_action.getCell(trajectory_index);
 
                     trajectory_index++;
 
                     if(myAgentPlaysFirst)
                     {
-                        text << (CheckersBase::N-cell) << '\n';
+                        text << (Checkers::N-cell) << '\n';
                     }
                     else
                     {
@@ -320,7 +340,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
                     typeText(text.str().c_str());
 
-                    if( trajectory_index >= current_action.trajectory.size() )
+                    if( trajectory_index >= current_action.getNumCells() )
                     {
                         mode = MODE_WAIT_MY_TURN;
                     }
@@ -338,9 +358,9 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
     agent->endMatch(result);
 }
 
-void Controller::extractGrid(const cv::Mat4b& screen, Agent::State& grid)
+void Controller::extractGrid(const cv::Mat4b& screen, Checkers::Grid& grid)
 {
-    for(int i=0; i<CheckersBase::N; i++)
+    for(int i=0; i<Checkers::N; i++)
     {
         cv::Mat4b ROI;
         extractCell(screen, i, ROI);
@@ -348,7 +368,7 @@ void Controller::extractGrid(const cv::Mat4b& screen, Agent::State& grid)
         cv::Vec6f features;
         computeFeatures(ROI, features);
 
-        grid.checkerboard[i] = predictCell(features);
+        grid[i] = predictCell(features);
     }
 }
 
@@ -356,8 +376,8 @@ void Controller::extractCell(const cv::Mat4b& screen, int no, cv::Mat4b& cell)
 {
     const cv::Rect checkerboard(0, 0, 441, 411);
     constexpr int border = 1;
-    constexpr int SIDE = CheckersBase::SIDE;
-    constexpr int N = CheckersBase::N;
+    constexpr int SIDE = Checkers::SIDE;
+    constexpr int N = Checkers::N;
 
     const int i = no;
     const int y = SIDE-1-(2*i+1)/SIDE;

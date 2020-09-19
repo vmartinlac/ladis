@@ -8,17 +8,18 @@
 #include <algorithm>
 #include <stdexcept>
 #include "Minimax.h"
-#include "CheckersBase.h"
 
-class Checkers : public CheckersBase
+class Checkers
 {
 public:
 
-    //static constexpr int SIDE = 10;
-    //static constexpr int N = (SIDE*SIDE)/2;
+    static constexpr int SIDE = 10;
+    static constexpr int N = (SIDE*SIDE)/2;
 
     static int flatIndexToGridIndex(int i);
     static int gridIndexToFlatIndex(int i);
+
+    using Grid = std::array<char,N>;
 
     class State
     {
@@ -41,6 +42,7 @@ public:
         void setMyTurn(bool my_turn);
         void setFlatGrid(const char* grid);
         void setSquareGrid(const char* grid);
+        void setGrid(const Grid& grid);
         char readCell(int i) const;
         std::string getSquareGrid() const;
         std::string getFlatGrid() const;
@@ -90,6 +92,8 @@ public:
 
     public:
 
+        int getNumCells() const;
+        int getCell(int i) const;
         void set(int num_moves, int (&trajectory)[N]);
         int getNumMoves() const;
         int getTrajectory(int i) const;

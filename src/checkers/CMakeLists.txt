@@ -10,7 +10,7 @@ add_library(
     StateSequence.cpp
     StateSequence.h)
 
-target_link_libraries(ladis_checkers PUBLIC opencv_imgcodecs opencv_imgproc ladis_controller)
+target_link_libraries(ladis_checkers PUBLIC opencv_imgcodecs opencv_imgproc)
 
 target_include_directories(ladis_checkers INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 

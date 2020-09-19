@@ -48,6 +48,11 @@ std::string Checkers::State::getFlatGrid() const
     return std::string(buffer);
 }
 
+void Checkers::State::setGrid(const Grid& grid)
+{
+    setFlatGrid(grid.data());
+}
+
 void Checkers::State::setFlatGrid(const char* grid)
 {
     for(int i=0; i<N; i++)
@@ -237,6 +242,16 @@ void Checkers::Action::set(int num_moves, int (&trajectory)[N])
 {
     myNumMoves = num_moves;
     std::copy(trajectory, trajectory+N, myTrajectory);
+}
+
+int Checkers::Action::getNumCells() const
+{
+    return myNumMoves+1;
+}
+
+int Checkers::Action::getCell(int i) const
+{
+    return myTrajectory[i];
 }
 
 int Checkers::Action::getNumMoves() const

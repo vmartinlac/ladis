@@ -1,47 +1,64 @@
 #include <iostream>
-#include "Database.h"
+#include "MySQLDatabase.h"
 
-Database::Database(const std::string database_path)
+MySQLDatabase::~MySQLDatabase()
 {
+    mysql_close(&myConnection);
+}
+
+MySQLDatabase::MySQLDatabase()
+{
+    mysql_init(&myConnection);
+    if(!mysql_real_connect(&myConnection, nullptr, "ladis", "ladis", "ladis", 0, nullptr, 0))
+    {
+        std::cerr << "Could not connect to mysql database!" << std::endl;
+        exit(1);
+    }
+
     const char* schema0 =
         "CREATE TABLE IF NOT EXISTS matches("
             "id INTEGER PRIMARY KEY,"
-            "start_datetime TEXT,"
+            "start_datetime DATETIME,"
             "agent_plays_first INTEGER,"
             "difficulty INTEGER,"
             "result INTEGER,"
             "agent TEXT);";
 
     const char* schema1 =
-        "CREATE TABLE IF NOT EXISTS moves("
+        "CREATE TABLE IF NOT EXISTS agent_moves("
             "id INTEGER PRIMARY KEY,"
             "match_id INTEGER,"
             "rank INTEGER,"
-            "state TEXT,"
-            "action TEXT,"
+            "grid CHAR(50),"
             "time_offset FLOAT,"
             "computation_time FLOAT);";
 
-    const char* prelude[] = { schema0, schema1, nullptr };
+    const char* schema2 =
+        "CREATE TABLE IF NOT EXISTS agent_atomic_moves("
+            "id INTEGER PRIMARY KEY,"
+            "move_id INTEGER,"
+            "rank INTEGER,"
+            "cell INTEGER);";
 
-    if( sqlite3_open(database_path.c_str(), &myConnection) != SQLITE_OK )
-    {
-        std::cerr << "Could not connect to database!" << std::endl;
-        abort();
-    }
+    const char* schema3 =
+        "CREATE TABLE IF NOT EXISTS opponent_moves("
+            "id INTEGER PRIMARY KEY,"
+            "match_id INTEGER,"
+            "grid_before CHAR(50),"
+            "grid_after CHAR(50));";
+
+    const char* prelude[] = { schema0, schema1, schema2, schema3, nullptr };
 
     for(const char** item=prelude; *item!=nullptr; item++)
     {
-        char* errmsg = nullptr;
-
-        if( sqlite3_exec(myConnection, *item, nullptr, nullptr, &errmsg) != SQLITE_OK )
+        if(mysql_query(&myConnection, *item))
         {
-            std::cerr << errmsg << std::endl;
-            sqlite3_free(errmsg);
-            abort();
+            std::cout << "Failed to initialize connection to MySQL!" << std::endl;
+            exit(1);
         }
     }
 
+    /*
     const char* sql_stmt[] = {
         "INSERT INTO matches(start_datetime,agent_plays_first,difficulty,result,agent) VALUES(?,?,?,?,?)",
         "INSERT INTO moves(match_id,rank,state,action,time_offset,computation_time) VALUES(?,?,?,?,?,?)",
@@ -67,26 +84,12 @@ Database::Database(const std::string database_path)
         item_sql++;
         item_ptr++;
     }
-}
-
-void Database::saveGame(const Match& match)
-{
-    std::lock_guard<std::mutex> lock(myMutex);
-
-    // TODO
-    /*
-    sqlite3_bind_text(myInsertMatchStmt, 1, 
-    for(int i=0; i<match.moves.size(); i++)
-    {
-        sqlite3_bind_
-    }
     */
 }
 
-Database::~Database()
+void MySQLDatabase::saveMatch(const Match& match)
 {
-    sqlite3_finalize(myInsertMatchStmt);
-    sqlite3_finalize(myInsertMoveStmt);
-    sqlite3_close(myConnection);
+    std::cerr << "saveMatch(...) not implemented!" << std::endl;
+    //abort();
 }
 

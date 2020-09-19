@@ -60,7 +60,7 @@ protected:
 
     void extractGrid(
         const cv::Mat4b& screen,
-        Agent::State& grid);
+        Checkers::Grid& grid);
 
 protected:
 

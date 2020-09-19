@@ -11,12 +11,13 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 enable_testing()
 
 find_package(PkgConfig REQUIRED)
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test)
+#find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test)
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc)
 find_package(Threads REQUIRED)
-find_package(Torch REQUIRED)
+#find_package(Torch REQUIRED)
 
-pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
+#pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
+pkg_check_modules(MARIADB REQUIRED IMPORTED_TARGET mariadb)
 
 add_subdirectory(src)
 
