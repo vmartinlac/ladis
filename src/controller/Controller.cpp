@@ -1,6 +1,5 @@
 #include <iostream>
 #include <thread>
-#include <opencv2/imgcodecs.hpp>
 #include "Checkers.h"
 #include "Controller.h"
 #include "Utils.h"
@@ -227,7 +226,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
             myEmulator->readScreen(screen);
 
-            //
+            /*
             {
                 static int image_id = 0;
                 std::stringstream filename;
@@ -235,7 +234,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
                 cv::imwrite(filename.str(), screen);
                 image_id++;
             }
-            //
+            */
         }
 
         need_new_screen = true;

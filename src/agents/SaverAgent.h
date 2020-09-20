@@ -3,13 +3,13 @@
 
 #include <chrono>
 #include <Agent.h>
-#include "Database.h"
+#include "MatchLog.h"
 
 class SaverAgent : public Agent
 {
 public:
 
-    SaverAgent(Database* db, Agent* backend);
+    SaverAgent(Agent* backend);
 
     std::string getName() final;
 
@@ -19,18 +19,17 @@ public:
 
     void endMatch(int result) final;
 
+    MatchLogPtr retrieveMatchLog();
+
 protected:
 
     using ClockType = std::chrono::steady_clock;
 
 protected:
 
-    Database* myDatabase;
     Agent* myBackend;
-    bool myHasCurrentMatch;
     bool myInterrupted;
-    Database::Match myCurrentMatch;
-    int myMoveCount;
+    MatchLogPtr myCurrentMatch;
     ClockType::time_point myStartTime;
 };
 

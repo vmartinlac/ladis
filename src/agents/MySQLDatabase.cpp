@@ -53,7 +53,7 @@ MySQLDatabase::MySQLDatabase()
     }
 }
 
-void MySQLDatabase::saveMatch(const Match& match)
+void MySQLDatabase::saveMatch(const MatchLog& match)
 {
     mariadb::statement_ref stmt0 = myConnection->create_statement("INSERT INTO matches(start_datetime, agent_plays_first, difficulty, result, agent) VALUES(?, ?, ?, ?, ?)");
     mariadb::statement_ref stmt1 = myConnection->create_statement("INSERT INTO agent_moves(match_id, rank, grid, time_offset, computation_time) VALUES(?,?,?,?,?)");
@@ -67,7 +67,7 @@ void MySQLDatabase::saveMatch(const Match& match)
     const mariadb::u64 match_id = stmt0->insert();
 
     int move_index = 0;
-    for(const AgentMove& m : match.agent_moves)
+    for(const MatchLog::AgentMove& m : match.agent_moves)
     {
         stmt1->set_unsigned64(0, match_id);
         stmt1->set_signed32(1, move_index);

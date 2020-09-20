@@ -2,6 +2,8 @@
 add_library(
     ladis_agents
     SHARED
+    MatchLog.h
+    MatchLog.cpp
     SaverAgent.h
     SaverAgent.cpp
     MinimaxAgent.h

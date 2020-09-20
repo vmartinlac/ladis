@@ -13,7 +13,7 @@ public:
 
     ~MySQLDatabase();
 
-    void saveMatch(const Match& match) override;
+    void saveMatch(const MatchLog& match) override;
 
 protected:
 

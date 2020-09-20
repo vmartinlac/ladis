@@ -17,37 +17,36 @@
 
 void play_match(int match_id)
 {
-    std::stringstream directory_ss;
-    directory_ss << "match_" << std::setw(5) << std::setfill('0') << match_id;
-
-    const std::string directory = directory_ss.str();
-
-    if( mkdir(directory.c_str(), S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) < 0 )
-    {
-        // TODO
-    }
-
-    if( chdir(directory.c_str()) < 0 )
-    {
-        std::cerr << "Could not change current directory!" << std::endl;
-        exit(1);
-    }
-
-    if(mysql_library_init(0, nullptr, nullptr))
-    {
-        std::cout << "Could not initialize mysqlclient library!" << std::endl;
-        exit(1);
-    }
-
-    MySQLDatabase db;
     Emulator em;
     UniformAgent agent;
-    SaverAgent saver_agent(&db, &agent);
+    SaverAgent saver_agent(&agent);
     Controller con;
 
     con.run(&em, &saver_agent, true, 0);
 
-    mysql_library_end();
+    MatchLogPtr match_log = saver_agent.retrieveMatchLog();
+
+    if(match_log)
+    {
+        {
+            std::stringstream filename;
+            filename << "log_" << match_id << ".json";
+            match_log->saveJson(filename.str());
+        }
+
+        if(mysql_library_init(0, nullptr, nullptr))
+        {
+            std::cout << "Could not initialize mysqlclient library!" << std::endl;
+            exit(1);
+        }
+
+        {
+            MySQLDatabase db;
+            db.saveMatch(*match_log);
+        }
+
+        mysql_library_end();
+    }
 }
 
 int main(int num_args, char** args)
