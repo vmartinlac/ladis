@@ -164,7 +164,7 @@ SDL_Surface *DUMMY_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_free( this->hidden->buffer );
 	}
 
-    printf("Switching to video mode %dx%d %d\n", width, height, bpp);
+    //printf("Switching to video mode %dx%d %d\n", width, height, bpp);
 	this->hidden->buffer = SDL_malloc(width * height * (bpp / 8));
 	if ( ! this->hidden->buffer ) {
 		SDL_SetError("Couldn't allocate buffer for requested mode");

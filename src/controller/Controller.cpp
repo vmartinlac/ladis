@@ -193,7 +193,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
         const double actual_time = X(RNG);
 
-        std::cout << "Sleeping for " << actual_time << " seconds before starting playing." << std::endl;
+        //std::cout << "Sleeping for " << actual_time << " seconds before starting playing." << std::endl;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(actual_time * 1.0e3)));
     }
@@ -439,7 +439,7 @@ bool Controller::processMenu()
                     {
                         ret = false;
                         typeKeys({EMULATOR_KEY_F2});
-                        std::cout << "Setting first player to agent." << std::endl;
+                        //std::cout << "Setting first player to agent." << std::endl;
                     }
                 }
                 else if(s0 == "V0US (jaune) C0MMENCEZ ")
@@ -448,7 +448,7 @@ bool Controller::processMenu()
                     {
                         ret = false;
                         typeKeys({EMULATOR_KEY_F2});
-                        std::cout << "Setting first player to DA2020." << std::endl;
+                        //std::cout << "Setting first player to DA2020." << std::endl;
                     }
                 }
                 else
@@ -467,7 +467,7 @@ bool Controller::processMenu()
                 {
                     ret = false;
                     typeKeys({EMULATOR_KEY_0 + myDifficulty});
-                    std::cout << "Setting difficulty to " << myDifficulty << "." << std::endl;
+                    //std::cout << "Setting difficulty to " << myDifficulty << "." << std::endl;
                 }
             }
 
@@ -475,7 +475,7 @@ bool Controller::processMenu()
             {
                 go_on = false;
                 typeKeys({EMULATOR_KEY_RETURN});
-                std::cout << "Ready to play" << std::endl;
+                //std::cout << "Ready to play" << std::endl;
             }
         }
     }

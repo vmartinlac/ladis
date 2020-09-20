@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include <random>
 #include <thread>
 #include <iomanip>
@@ -76,34 +77,58 @@ int main(int num_args, char** args)
         rng.seed(s);
     }
 
-    int running = 0;
+    std::map<int,int> pid_to_match_index;
+
+    auto wait_one_child = [&pid_to_match_index] ()
+    {
+        const int child_pid = wait(nullptr);
+        std::map<int,int>::iterator it = pid_to_match_index.find(child_pid);
+
+        if(it == pid_to_match_index.end())
+        {
+            std::cerr << "Internal error" << std::endl;
+            exit(1);
+        }
+
+        std::cout << "Matched " << it->second << " ended." << std::endl;
+
+        pid_to_match_index.erase(it);
+    };
+
     bool exit_as_child = false;
 
     for(int match_index=0; !exit_as_child && match_index<num_matches; match_index++)
     {
-        if(running >= num_processes)
+        if(pid_to_match_index.size() >= num_processes)
         {
-            wait(nullptr);
-            running--;
+            wait_one_child();
         }
 
-        if(fork() == 0)
+        const int child_pid = fork();
+
+        if(child_pid == 0)
         {
             play_match(match_index);
             exit_as_child = true;
         }
         else
         {
-            running++;
+            if(pid_to_match_index.find(child_pid) != pid_to_match_index.end())
+            {
+                std::cerr << "Internal error" << std::endl;
+                exit(1);
+            }
+
+            pid_to_match_index[child_pid] = match_index;
+            std::cout << "Match " << match_index << " started." << std::endl;
         }
     }
 
     if(!exit_as_child)
     {
-        while(running > 0)
+        while(!pid_to_match_index.empty())
         {
-            wait(nullptr);
-            running--;
+            wait_one_child();
         }
     }
 

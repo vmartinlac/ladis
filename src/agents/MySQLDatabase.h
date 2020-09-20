@@ -1,8 +1,9 @@
 
 #pragma once
 
+#include <mariadb++/account.hpp>
+#include <mariadb++/connection.hpp>
 #include "Database.h"
-#include "mysql.h"
 
 class MySQLDatabase : public Database
 {
@@ -16,6 +17,7 @@ public:
 
 protected:
 
-    MYSQL myConnection;
+    mariadb::account_ref myAccount;
+    mariadb::connection_ref myConnection;
 };
 

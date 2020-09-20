@@ -180,7 +180,7 @@ public:
 				}
 				midi.handler=handler;
 				midi.available=true;	
-				LOG_MSG("MIDI:Opened device:%s",handler->GetName());
+				//LOG_MSG("MIDI:Opened device:%s",handler->GetName());
 				return;
 			}
 			handler=handler->next;
@@ -192,7 +192,7 @@ getdefault:
 			if (handler->Open(conf)) {
 				midi.available=true;	
 				midi.handler=handler;
-				LOG_MSG("MIDI:Opened device:%s",handler->GetName());
+				//LOG_MSG("MIDI:Opened device:%s",handler->GetName());
 				return;
 			}
 			handler=handler->next;

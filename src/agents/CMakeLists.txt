@@ -13,7 +13,7 @@ add_library(
     Database.h
     Database.cpp)
 
-target_link_libraries(ladis_agents PUBLIC ladis_controller PkgConfig::MARIADB PkgConfig::JSONCPP)
+target_link_libraries(ladis_agents PUBLIC ladis_controller mariadbclientpp::mariadbclientpp PkgConfig::JSONCPP)
 
 target_include_directories(ladis_agents INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 
