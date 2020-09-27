@@ -160,6 +160,11 @@ public:
         const State& state,
         std::vector<Action>& actions);
 
+    static bool getResultingState(
+        const State& state,
+        const Action& action,
+        State& afterstate);
+
     using Solver = Minimax<State, UtilityFunction, Action, ActionIterator>;
 
 public:

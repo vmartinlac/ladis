@@ -10,12 +10,10 @@ add_library(
     MinimaxAgent.cpp
     UniformAgent.h
     UniformAgent.cpp
-    MySQLDatabase.h
-    MySQLDatabase.cpp
-    Database.h
-    Database.cpp)
+    ExperimentalAgent.h
+    ExperimentalAgent.cpp)
 
-target_link_libraries(ladis_agents PUBLIC ladis_controller mariadbclientpp::mariadbclientpp PkgConfig::JSONCPP)
+target_link_libraries(ladis_agents PUBLIC ladis_controller mongo::mongocxx_shared mongo::bsoncxx_shared)
 
 target_include_directories(ladis_agents INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 

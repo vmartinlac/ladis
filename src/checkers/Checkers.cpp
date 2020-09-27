@@ -272,6 +272,23 @@ void Checkers::Action::invert()
     }
 }
 
+bool Checkers::getResultingState(const State& state, const Action& action, State& afterstate)
+{
+    bool ret = false;
+
+    ActionIterator it;
+    it.init(state);
+
+    Action action2;
+
+    while(!ret && it.next(state, action2, afterstate))
+    {
+        ret = (action2 == action);
+    }
+
+    return ret;
+}
+
 void Checkers::enumerateActions(const State& state, std::vector< std::tuple<Action,State> >& action_states)
 {
     action_states.clear();

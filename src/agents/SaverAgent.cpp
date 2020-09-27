@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 #include "SaverAgent.h"
 #include "Utils.h"
 
@@ -30,7 +31,19 @@ void SaverAgent::beginMatch(bool agent_plays_first, int difficulty)
     myCurrentMatch->difficulty = difficulty;
     myCurrentMatch->agent_moves.clear();
     myCurrentMatch->agent = myBackend->getName();
-    myCurrentMatch->start_timestamp = time(nullptr);
+    myCurrentMatch->start_timestamp = ClockType::now();
+
+    {
+        char buffer[512];
+
+        if(gethostname(buffer, 512) != 0)
+        {
+            std::cerr << "gethostname() failed!" << std::endl;
+            exit(1);
+        }
+
+        myCurrentMatch->hostname = buffer;
+    }
 
     myStartTime = ClockType::now();
 }
@@ -56,8 +69,8 @@ bool SaverAgent::play(const Checkers::State& state, Checkers::Action& action)
             {
                 myCurrentMatch->agent_moves.emplace_back();
 
-                myCurrentMatch->agent_moves.back().computation_time = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count() * 1.0e-3;
-                myCurrentMatch->agent_moves.back().time_offset = std::chrono::duration_cast<std::chrono::milliseconds>(t2-myStartTime).count() * 1.0e-3;
+                myCurrentMatch->agent_moves.back().timestamp_before_computation = t1;
+                myCurrentMatch->agent_moves.back().timestamp_after_computation = t2;
                 myCurrentMatch->agent_moves.back().state = state;
                 myCurrentMatch->agent_moves.back().action = action;
             }

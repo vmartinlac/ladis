@@ -1,11 +1,13 @@
 #include <iostream>
-#include <json/json.h>
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/builder/stream/array.hpp>
 #include "Utils.h"
 #include "MatchLog.h"
 
-void MatchLog::saveJson(const std::string& path)
+bsoncxx::document::value MatchLog::toBson() const
 {
-    Json::Value agent_moves;
+    bsoncxx::builder::stream::array agent_moves;
 
     for(const AgentMove& item : this->agent_moves)
     {
@@ -15,34 +17,38 @@ void MatchLog::saveJson(const std::string& path)
             exit(1);
         }
 
-        Json::Value action2;
+        bsoncxx::builder::stream::array trajectory_builder;
         for(int i=0; i<item.action.getNumCells(); i++)
         {
-            action2.append(item.action.getCell(i));
+            trajectory_builder << item.action.getCell(i);
         }
 
-        Json::Value item2;
-        item2["state"] = item.state.getFlatGrid();
-        item2["action"] = action2;
-        item2["time_offset"] = item.time_offset;
-        item2["computation_time"] = item.computation_time;
+        bsoncxx::builder::stream::document move_builder;
+        move_builder << "state" << item.state.getFlatGrid();
+        move_builder << "action" << trajectory_builder.extract();
+        move_builder << "timestamp_before_computation" << bsoncxx::types::b_date(item.timestamp_before_computation);
+        move_builder << "timestamp_after_computation" << bsoncxx::types::b_date(item.timestamp_after_computation);
 
-        agent_moves.append(item2);
+        agent_moves << move_builder.extract();
     }
 
-    Json::Value root;
-    root["start_utc_datetime"] = Utils::makeUTCISO8601DateTime(this->start_timestamp);
-    root["start_timestamp"] = Json::Int64(this->start_timestamp);
-    root["agent_plays_first"] = this->agent_plays_first;
-    root["difficulty"] = this->difficulty;
-    root["result"] = this->result;
-    root["agent"] = this->agent;
-    root["agent_moves"] = agent_moves;
+    bsoncxx::builder::stream::document builder;
 
-    {
-        std::ofstream f(path.c_str());
-        Json::StyledWriter writer;
-        f << writer.write(root);
-    }
+    builder << "start_timestamp" << bsoncxx::types::b_date(this->start_timestamp);
+    builder << "agent_plays_first" << this->agent_plays_first;
+    builder << "difficulty" << this->difficulty;
+    builder << "result" << this->result;
+    builder << "agent" << this->agent;
+    builder << "agent_moves" << agent_moves.extract();
+
+    builder << bsoncxx::builder::stream::finalize;
+
+    return builder.extract();
+}
+
+void MatchLog::saveJson(const std::string& path) const
+{
+    std::ofstream f(path.c_str());
+    f << bsoncxx::to_json(this->toBson());
 }
 

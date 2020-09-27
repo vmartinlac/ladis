@@ -2,8 +2,9 @@
 #pragma once
 
 #include <memory>
-#include <ctime>
+#include <chrono>
 #include <vector>
+#include <bsoncxx/document/value.hpp>
 #include "Checkers.h"
 
 struct MatchLog
@@ -12,18 +13,20 @@ struct MatchLog
     {
         Checkers::State state;
         Checkers::Action action;
-        double time_offset;
-        double computation_time;
+        std::chrono::system_clock::time_point timestamp_before_computation;
+        std::chrono::system_clock::time_point timestamp_after_computation;
     };
 
-    time_t start_timestamp;
+    std::chrono::system_clock::time_point start_timestamp;
     bool agent_plays_first;
     int difficulty;
     int result;
+    std::string hostname;
     std::string agent;
     std::vector<AgentMove> agent_moves;
 
-    void saveJson(const std::string& path);
+    void saveJson(const std::string& path) const;
+    bsoncxx::document::value toBson() const;
 };
 
 using MatchLogPtr = std::shared_ptr<MatchLog>;
