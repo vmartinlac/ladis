@@ -1,4 +1,5 @@
 #include <queue>
+#include <mutex>
 #include <thread>
 #include <iostream>
 #include <cassert>

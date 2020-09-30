@@ -41,7 +41,7 @@ bsoncxx::document::value MatchLog::toBson() const
     builder << "agent" << this->agent;
     builder << "agent_moves" << agent_moves.extract();
 
-    builder << bsoncxx::builder::stream::finalize;
+    //builder << bsoncxx::builder::stream::finalize;
 
     return builder.extract();
 }

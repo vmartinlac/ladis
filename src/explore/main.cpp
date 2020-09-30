@@ -34,7 +34,7 @@ void play_match(int match_id)
             match_log->saveJson(filename.str());
         }
 
-        mongocxx::client client(mongocxx::uri("mongodb://192.168.1.21/"));
+        mongocxx::client client(mongocxx::uri("mongodb://192.168.1.2/"));
         mongocxx::database db = client["ladis"];
         mongocxx::collection matches = db["matches"];
         matches.insert_one(match_log->toBson());
