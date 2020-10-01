@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<style type="text/css">
+th { background: #AAA; }
+td { background: #DDD; }
+th,td { padding:6px }
+</style>
+</head>
+<body>
+<table>
+<tr>
+<th>ObjectId</th>
+<th>Start timestamp</th>
+<th>Agent</th>
+<th>Result</th>
+</tr>
+{% for match in matches %}
+<tr>
+<td><a href="/match/{{ match['_id'] }}">{{ match['_id'] }}</a></td>
+<td>{{ match['start_timestamp'] }}</td>
+<td>{{ match['agent'] }}</td>
+<td>{{ match['result'] }}</td>
+</tr>
+{% endfor %}
+</table>
+</body>
+</html>
+
