@@ -43,6 +43,7 @@ public:
         void setFlatGrid(const char* grid);
         void setSquareGrid(const char* grid);
         void setGrid(const Grid& grid);
+        void setInitialGrid();
         char readCell(int i) const;
         std::string getSquareGrid() const;
         std::string getFlatGrid() const;
