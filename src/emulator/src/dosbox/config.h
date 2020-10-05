@@ -94,7 +94,7 @@
 #define C_UNALIGNED_MEMORY 1
 
 /* define to 1 if you have XKBlib.h and X11 lib */
-#define C_X11_XKB 0
+//#define C_X11_XKB 0
 
 /* libm doesn't include powf */
 /* #undef DB_HAVE_NO_POWF */
