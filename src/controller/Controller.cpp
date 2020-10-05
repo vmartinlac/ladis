@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+//#include <opencv2/imgcodecs.hpp>
 #include "Checkers.h"
 #include "Controller.h"
 #include "Utils.h"
@@ -225,17 +226,19 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
             myEmulator->readScreen(screen);
-
-            /*
-            {
-                static int image_id = 0;
-                std::stringstream filename;
-                filename << "screen_" << image_id << ".png";
-                cv::imwrite(filename.str(), screen);
-                image_id++;
-            }
-            */
         }
+
+        /*
+        {
+            static int image_id = 0;
+            std::stringstream filename;
+            filename << "screen_" << image_id << ".png";
+            cv::imwrite(filename.str(), screen);
+            image_id++;
+        }
+        std::cout << (extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." ) << std::endl;
+        std::cout << extractString(screen(cv::Rect(445, 246, 112, 8))) << std::endl;
+        */
 
         need_new_screen = true;
 
@@ -254,7 +257,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             else if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
             {
             }
-            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            else if( extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." )
             {
             }
             else if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
@@ -309,7 +312,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             {
                 mode = MODE_WAIT_MY_TURN;
             }
-            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            else if( extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." )
             {
                 mode = MODE_WAIT_MY_TURN;
             }
