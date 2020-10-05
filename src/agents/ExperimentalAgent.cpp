@@ -3,6 +3,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/array.hpp>
+#include "MatchLog.h"
 #include "ExperimentalAgent.h"
 
 ExperimentalAgent::ExperimentalAgent()
@@ -17,6 +18,8 @@ std::string ExperimentalAgent::getName()
 
 void ExperimentalAgent::beginMatch(bool agent_plays_first, int difficulty)
 {
+    /*
+
     mongocxx::client client(mongocxx::uri("mongodb://192.168.1.2/"));
     mongocxx::database db = client["ladis"];
     mongocxx::collection matches = db["matches"];
@@ -42,11 +45,54 @@ void ExperimentalAgent::beginMatch(bool agent_plays_first, int difficulty)
     {
         learnMatch(doc);
     }
+
+    */
 }
 
 void ExperimentalAgent::learnMatch(bsoncxx::document::view doc)
 {
-    // TODO
+    MatchLog log;
+    log.fromBson(doc);
+
+    std::vector< std::tuple<Checkers::Grid,Checkers::Grid> > transitions;
+
+    bool has_last_opponent_state = false;
+    Checkers::State last_opponent_state;
+
+    if(!log.agent_plays_first)
+    {
+        has_last_opponent_state = true;
+        last_opponent_state.setInitialGrid();
+        last_opponent_state.setMyTurn(false);
+    }
+
+    bool ok = true;
+
+    for(const MatchLog::AgentMove& m : log.agent_moves)
+    {
+        if(ok)
+        {
+            if(has_last_opponent_state)
+            {
+                transitions.emplace_back(last_opponent_state.getGrid(), m.state.getGrid());
+            }
+
+            has_last_opponent_state = true;
+            ok = Checkers::getResultingState(m.state, m.action, last_opponent_state) && !last_opponent_state.isMyTurn();
+        }
+    }
+
+    if(ok)
+    {
+        for( const std::tuple<Checkers::Grid, Checkers::Grid>& item : transitions )
+        {
+            myOpponentSamples.insert(std::make_pair(std::get<0>(item), std::get<1>(item)));
+        }
+    }
+    else
+    {
+        std::cerr << "Bad match in database!" << std::endl;
+    }
 }
 
 void ExperimentalAgent::endMatch(int result)
@@ -56,6 +102,8 @@ void ExperimentalAgent::endMatch(int result)
 
 bool ExperimentalAgent::play(const Checkers::State& state, Checkers::Action& action)
 {
+    std::cout << "Computing next move..." << std::endl;
+
     bool ret = false;
 
     if(state.isMyTurn())
@@ -78,6 +126,14 @@ bool ExperimentalAgent::play(const Checkers::State& state, Checkers::Action& act
                 action = investigated_action;
             }
         }
+    }
+
+    std::cout << "Finished!" << std::endl;
+
+    if(ret)
+    {
+        std::cout << state.getSquareGrid() << std::endl;
+        std::cout << action.getText() << std::endl;
     }
 
     return ret;

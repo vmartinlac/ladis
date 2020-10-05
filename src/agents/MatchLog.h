@@ -27,6 +27,7 @@ struct MatchLog
 
     void saveJson(const std::string& path) const;
     bsoncxx::document::value toBson() const;
+    void fromBson(bsoncxx::document::view doc);
 };
 
 using MatchLogPtr = std::shared_ptr<MatchLog>;

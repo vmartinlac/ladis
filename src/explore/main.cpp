@@ -20,13 +20,13 @@ void play_match(int match_id)
 {
     Emulator em;
     ExperimentalAgent agent;
-    //SaverAgent saver_agent(&agent);
+    SaverAgent saver_agent(&agent);
     Controller con;
 
-    con.run(&em, &agent, (match_id & 1)==0, 3);
-    //con.run(&em, &saver_agent, (match_id & 1)==0, 3);
+    //con.run(&em, &agent, (match_id & 1)==0, 3);
+    con.run(&em, &saver_agent, (match_id & 1)==0, 3);
 
-    /*
+    //
     MatchLogPtr match_log = saver_agent.retrieveMatchLog();
 
     if(match_log)
@@ -42,7 +42,7 @@ void play_match(int match_id)
         mongocxx::collection matches = db["matches"];
         matches.insert_one(match_log->toBson());
     }
-    */
+    //
 }
 
 int main(int num_args, char** args)
