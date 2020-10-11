@@ -19,6 +19,7 @@ def view_index(request):
 
     pipeline = list()
     pipeline.append({'$sort':{'start_timestamp':pymongo.DESCENDING}})
+    pipeline.append({'$limit':50})
 
     matches = list()
     with collection.aggregate(pipeline) as cursor:
