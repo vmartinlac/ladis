@@ -3,6 +3,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/array.hpp>
+#include "Utils.h"
 #include "MatchLog.h"
 #include "ExperimentalAgent.h"
 
@@ -18,6 +19,7 @@ std::string ExperimentalAgent::getName()
 
 void ExperimentalAgent::beginMatch(bool agent_plays_first, int difficulty)
 {
+    Utils::seedRNG(myRNG);
     /*
 
     mongocxx::client client(mongocxx::uri("mongodb://192.168.1.2/"));
@@ -219,7 +221,10 @@ double ExperimentalAgent::computeHeuristicValue(const Checkers::State& state)
     constexpr double gamma = 2.0;
     constexpr double alpha = 0.1;
     const double value = alpha * ( (players_men - opponents_men) + gamma * (players_queens - opponents_queens) ) / (40.0 * (1.0 + gamma));
+    const double noise_sdev = 0.3 * alpha / 40.0;
 
-    return value;
+    std::normal_distribution<double> X(0.0, noise_sdev);
+
+    return value + X(myRNG);
 }
 

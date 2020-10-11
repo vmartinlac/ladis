@@ -200,7 +200,15 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     if(go_on)
     {
-        typeText("mount c /DATA/victor/emulation/dosbox\n");
+        const char* path = getenv("LADIS_GAME_PATH");
+        if(!path)
+        {
+            std::cout << "Path to game was not set!" << std::endl;
+            exit(1);
+        }
+        typeText("mount c ");
+        typeText(path);
+        typeText("\n");
         typeText("c:\n");
         typeText("cd DAME2020\n");
         typeText("DA2020\n");
