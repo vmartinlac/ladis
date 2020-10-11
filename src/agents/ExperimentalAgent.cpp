@@ -104,8 +104,6 @@ void ExperimentalAgent::endMatch(int result)
 
 bool ExperimentalAgent::play(const Checkers::State& state, Checkers::Action& action)
 {
-    std::cout << "Computing next move..." << std::endl;
-
     bool ret = false;
 
     if(state.isMyTurn())
@@ -128,14 +126,6 @@ bool ExperimentalAgent::play(const Checkers::State& state, Checkers::Action& act
                 action = investigated_action;
             }
         }
-    }
-
-    std::cout << "Finished!" << std::endl;
-
-    if(ret)
-    {
-        std::cout << state.getSquareGrid() << std::endl;
-        std::cout << action.getText() << std::endl;
     }
 
     return ret;
