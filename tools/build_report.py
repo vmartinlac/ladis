@@ -13,6 +13,10 @@ result_codes[3] = 'AGENT_ILLEGAL_MOVE'
 result_codes[4] = 'CONTROLLER_ERROR'
 result_codes[5] = 'AGENT_ERROR'
 
+first_player = dict()
+first_player[True] = 'AGENT'
+first_player[False] = 'OPPONENT'
+
 class ReportBuilder:
 
     def __init__(self):
@@ -52,13 +56,13 @@ class ReportBuilder:
         index.write('<th>Date</th>')
         index.write('<th>Difficulty</th>')
         index.write('<th>Agent</th>')
+        index.write('<th>First player</th>')
         index.write('<th>Number of moves</th>')
         index.write('<th>Result</th>')
         index.write('</tr>')
 
         pipeline = list()
         pipeline.append({'$sort':{'start_timestamp':pymongo.DESCENDING}})
-        #pipeline.append({'$limit':5})
 
         with self.collection.aggregate(pipeline) as cursor:
             for match in cursor:
@@ -80,12 +84,19 @@ class ReportBuilder:
                 index.write('<td>{}</td>'.format(match['start_timestamp'].replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)))
                 index.write('<td>{}</td>'.format(match['difficulty']))
                 index.write('<td>{}</td>'.format(match['agent']))
+                index.write('<td>{}</td>'.format(first_player[match['agent_plays_first']]))
                 index.write('<td>{}</td>'.format(len(match['agent_moves'])))
                 index.write('<td>{}</td>'.format(result_codes[match['result']]))
                 index.write('</tr>')
 
         index.write('</table>')
         self.end_document(index)
+
+    def format_timedelta(self, delta):
+        total_seconds = int(delta.total_seconds())
+        total_minutes, seconds = divmod(total_seconds, 60)
+        total_hours, minutes = divmod(total_minutes, 60)
+        return "{}:{}:{}".format(total_hours, minutes, seconds)
 
     def write_log_page(self, directory, log):
         page = self.begin_document(os.path.join(directory, 'index.html'))
@@ -96,6 +107,7 @@ class ReportBuilder:
         page.write('<tr><th>Date</th><td>{}</td></tr>'.format(log['start_timestamp'].replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)))
         page.write('<tr><th>Difficulty</th><td>{}</td></tr>'.format(log['difficulty']))
         page.write('<tr><th>Agent</th><td>{}</td></tr>'.format(log['agent']))
+        page.write('<tr><th>First player</th><td>{}</td></tr>'.format(first_player[log['agent_plays_first']]))
         page.write('<tr><th>Number of moves</th><td>{}</td></tr>'.format(len(log['agent_moves'])))
         page.write('<tr><th>Result</th><td>{}</td></tr>'.format(result_codes[log['result']]))
         page.write('</table>')
@@ -103,6 +115,7 @@ class ReportBuilder:
         page.write('<table>')
         page.write('<tr>')
         page.write('<th>Index</th>')
+        page.write('<th>Time offset</th>')
         page.write('<th>Move</th>')
         page.write('</tr>')
         count = 0
@@ -148,6 +161,7 @@ class ReportBuilder:
             im.save(os.path.join(directory, filename))
             page.write('<tr>')
             page.write('<td>{}</td>'.format(count))
+            page.write('<td>{}</td>'.format(self.format_timedelta(move['timestamp_before_computation'] - log['start_timestamp'])))
             page.write('<td><img src="{}" /></td>'.format(filename))
             page.write('</tr>')
             count += 1
