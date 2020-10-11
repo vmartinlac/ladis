@@ -2,17 +2,19 @@
 <html lang="fr">
 <head>
 <style type="text/css">
-th { background: #AAA; }
-td { background: #DDD; }
-th,td { padding:6px }
+table th { background: #AAA; padding:1em; }
+table td { background: #CCC; padding:1em; }
 </style>
 </head>
 <body>
 <table>
 <tr>
-<th>ObjectId</th>
-<th>Start timestamp</th>
+<th>Object ID</th>
+<th>Date</th>
+<th>Difficulty</th>
 <th>Agent</th>
+<th>First player</th>
+<th>Number of moves</th>
 <th>Result</th>
 </tr>
 {% for match in matches %}
