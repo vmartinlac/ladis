@@ -14,8 +14,8 @@ find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc)
 find_package(Threads REQUIRED)
 find_package(mongocxx REQUIRED)
 find_package(bsoncxx REQUIRED)
+find_package(Torch REQUIRED)
 #find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
-#find_package(Torch REQUIRED)
 
 add_subdirectory(src)
 
