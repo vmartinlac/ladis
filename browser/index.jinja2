@@ -2,25 +2,30 @@
 <html lang="fr">
 <head>
 <style type="text/css">
-th { background: #AAA; }
-td { background: #DDD; }
-th,td { padding:6px }
+table th { background: #AAA; padding:1em; }
+table td { background: #CCC; padding:1em; }
 </style>
 </head>
 <body>
 <table>
 <tr>
-<th>ObjectId</th>
-<th>Start timestamp</th>
+<th>Object ID</th>
+<th>Date</th>
+<th>Difficulty</th>
 <th>Agent</th>
+<th>First player</th>
+<th>Number of moves</th>
 <th>Result</th>
 </tr>
 {% for match in matches %}
 <tr>
 <td><a href="/match/{{ match['_id'] }}">{{ match['_id'] }}</a></td>
-<td>{{ match['start_timestamp'] }}</td>
+<td>{{ match['start_timestamp']|filter_datetime }}</td>
+<td>{{ match['difficulty'] }}</td>
 <td>{{ match['agent'] }}</td>
-<td>{{ match['result'] }}</td>
+<td>{{ match['agent_plays_first']|filter_first_player }}</td>
+<td>{{ match['num_agent_moves'] }}</td>
+<td>{{ match['result']|filter_result }}</td>
 </tr>
 {% endfor %}
 </table>

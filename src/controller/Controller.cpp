@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+//#include <opencv2/imgcodecs.hpp>
 #include "Checkers.h"
 #include "Controller.h"
 #include "Utils.h"
@@ -199,7 +200,15 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
 
     if(go_on)
     {
-        typeText("mount c /DATA/victor/emulation/dosbox\n");
+        const char* path = getenv("LADIS_GAME_PATH");
+        if(!path)
+        {
+            std::cout << "Path to game was not set!" << std::endl;
+            exit(1);
+        }
+        typeText("mount c ");
+        typeText(path);
+        typeText("\n");
         typeText("c:\n");
         typeText("cd DAME2020\n");
         typeText("DA2020\n");
@@ -225,17 +234,19 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(6000));
             myEmulator->readScreen(screen);
-
-            /*
-            {
-                static int image_id = 0;
-                std::stringstream filename;
-                filename << "screen_" << image_id << ".png";
-                cv::imwrite(filename.str(), screen);
-                image_id++;
-            }
-            */
         }
+
+        /*
+        {
+            static int image_id = 0;
+            std::stringstream filename;
+            filename << "screen_" << image_id << ".png";
+            cv::imwrite(filename.str(), screen);
+            image_id++;
+        }
+        std::cout << (extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." ) << std::endl;
+        std::cout << extractString(screen(cv::Rect(445, 246, 112, 8))) << std::endl;
+        */
 
         need_new_screen = true;
 
@@ -254,7 +265,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             else if( extractString(screen(cv::Rect(444, 246, 56, 8))) == "JE J0UE" )
             {
             }
-            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            else if( extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." )
             {
             }
             else if( extractString(screen(cv::Rect(0, 445, 120, 8))) == "A V0US DE J0UER" )
@@ -309,7 +320,7 @@ void Controller::run(Emulator* emulator, Agent* agent, bool agent_plays_first, i
             {
                 mode = MODE_WAIT_MY_TURN;
             }
-            else if( extractString(screen(cv::Rect(445, 246, 120, 8))) == "JE REFLECHIS..." )
+            else if( extractString(screen(cv::Rect(445, 246, 112, 8))) == "JE REFLECHIS.." )
             {
                 mode = MODE_WAIT_MY_TURN;
             }

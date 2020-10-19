@@ -1,8 +1,44 @@
-<html>
+<!DOCTYPE html>
+<html lang="fr">
 <head>
+<style type="text/css">
+table th { background: #AAA; padding:1em; }
+table td { background: #CCC; padding:1em; }
+</style>
 </head>
 <body>
-<h1>Priviet!</h1>
+<h1>Match log</h1>
+
+<h2>Match information</h2>
+
+<table>
+<tr><th>Object ID</th><td>{{ match['_id'] }}</td></tr>
+<tr><th>Date</th><td>{{ match['start_timestamp']|filter_datetime }}</td></tr>
+<tr><th>Difficulty</th><td>{{ match['difficulty'] }}</td></tr>
+<tr><th>Agent</th><td>{{ match['agent'] }}</td></tr>
+<tr><th>First player</th><td>{{ match['agent_plays_first']|filter_first_player }}</td></tr>
+<tr><th>Number of moves</th><td>{{ match['agent_moves']|filter_num_moves }}</td></tr>
+<tr><th>Result</th><td>{{ match['result']|filter_result }}</td></tr>
+</table>
+
+<h2>Agent moves</h2>
+
+<table>
+<tr>
+<th>Index</th>
+<th>Time offset</th>
+<th>Computation time</th>
+<th>Move</th>
+</tr>
+{% for m in match['agent_moves'] %}
+<tr>
+<td>{{ m['index'] }}</td>
+<td>{{ m['time_offset'] | filter_time_offset }}</td>
+<td>{{ m['computation_time'] | filter_time_offset }}</td>
+<td><img src="{{ m['image_url'] }}" /></td>
+</tr>
+{% endfor %}
+</table>
+
 </body>
 </html>
-
